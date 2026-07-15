@@ -1411,15 +1411,12 @@ async function _guardarHistorial(totales){
   const av=document.getElementById('r-cambios-aviso');if(av)av.style.display='none';
   await renderHistorial();
 }
-async function renderHistorial(){
-  const cont=document.getElementById('hist-lista');if(!cont)return;
-  let hist=[];let origen='💾 Local';
-  const apiRes=await apiCall('GET','/api/historial');
-  if(apiRes?.data?.length){
-    origen='☁️ Servidor';
-    hist=apiRes.data.map(h=>({id:h.id,fecha:new Date(h.created_at).toLocaleDateString('es-CO')+' '+new Date(h.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),nip:h.nip,nombre:h.nombre,años:h.años,mesEjec:h.mes_ejec,totalBruto:h.total_bruto,totalNeto:h.total_neto,totalIndexado:h.total_indexado,snap:h.snap,_api:true}));
-  } else {try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}}
-  if(!hist.length){cont.innerHTML='<p style="color:var(--tx2);font-size:13px">No hay liquidaciones guardadas. ('+origen+')</p>';return;}
+
+function _renderTablaHistorial(cont, hist, origen){
+  if(!hist.length){
+    cont.innerHTML='<p style="color:var(--tx2);font-size:13px">No hay liquidaciones guardadas. ('+origen+')</p>';
+    return;
+  }
   const tbl=document.createElement('table');tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
   tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th>Acciones</th></tr></thead>';
   const tbody=document.createElement('tbody');
@@ -1432,6 +1429,43 @@ async function renderHistorial(){
   tbl.appendChild(tbody);
   cont.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+hist.length+' liquidaciones</div>';
   cont.appendChild(tbl);
+}
+
+async function renderHistorial(){
+  const cont=document.getElementById('hist-lista');if(!cont)return;
+
+  // 1. Mostrar localStorage INMEDIATAMENTE mientras carga el servidor
+  let histLocal=[];
+  try{histLocal=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
+  if(histLocal.length) _renderTablaHistorial(cont, histLocal, '💾 Local (cargando servidor...)');
+
+  // 2. Intentar API en paralelo con timeout de 5 segundos
+  let hist=histLocal; let origen='💾 Local';
+  try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),5000);
+    const res=await fetch((API_URL||'')+'/api/historial',{signal:controller.signal});
+    clearTimeout(timeout);
+    if(res.ok){
+      const apiRes=await res.json();
+      if(apiRes?.data?.length){
+        origen='☁️ Servidor';
+        hist=apiRes.data.map(h=>({
+          id:h.id,
+          fecha:new Date(h.created_at).toLocaleDateString('es-CO')+' '+new Date(h.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
+          nip:h.nip,nombre:h.nombre,años:h.años,mesEjec:h.mes_ejec,
+          totalBruto:h.total_bruto,totalNeto:h.total_neto,totalIndexado:h.total_indexado,
+          snap:h.snap,_api:true
+        }));
+        // Sincronizar localStorage con servidor
+        localStorage.setItem('liq_hist',JSON.stringify(hist));
+      }
+    }
+  }catch(e){
+    console.warn('Servidor no disponible, usando localStorage:', e.message);
+  }
+  if(!hist.length){cont.innerHTML='<p style="color:var(--tx2);font-size:13px">No hay liquidaciones guardadas. ('+origen+')</p>';return;}
+  _renderTablaHistorial(cont, hist, origen);
 }
 async function _cargarHist(id,fromAPI=false){
   let snap=null,nombre='';
