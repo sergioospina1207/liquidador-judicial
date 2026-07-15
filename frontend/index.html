@@ -1243,7 +1243,7 @@ function generarResumen(){
     '</div>'+
     '<div class="cb no-print" style="padding:8px 14px;display:flex;gap:8px">'+
     '<button class="btn btn-xs btn-o" onclick="window.print()">&#128438; Imprimir</button>'+
-    '<button class="btn btn-xs btn-o" onclick="exportarCSV()">&#128229; CSV</button></div>'+
+    '<button class="btn btn-xs btn-o" onclick="exportarCSV()">&#128229; CSV</button> <button class="btn btn-xs btn-s" onclick="exportarExcel()">&#128202; Excel</button></div>'+
     '<div class="cb" style="padding:0"><div class="tw"></div></div>';
   cont.appendChild(card);
   const tw=card.querySelector('.tw');
@@ -1797,6 +1797,180 @@ function nuevaLiquidacion(){
   localStorage.removeItem('liq_sesion_activa');
   showTab('tab-lxm');
   alert('✅ Nueva liquidación iniciada.');
+}
+
+
+// ══════════════════════════════════════════════════════════
+// EXPORTAR EXCEL — plantilla de liquidación
+// ══════════════════════════════════════════════════════════
+function exportarExcel(){
+  if(!Object.keys(state.ps).length){
+    alert('Primero calcule y genere el resumen antes de exportar.');
+    return;
+  }
+
+  // Cargar SheetJS dinámicamente si no está
+  if(typeof XLSX === 'undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>_generarExcel();
+    document.head.appendChild(s);
+  } else {
+    _generarExcel();
+  }
+}
+
+function _generarExcel(){
+  const wb = XLSX.utils.book_new();
+  const mc=MESES_C[MESES.indexOf(state.mesEjec)];
+  const ipcEj=APPD.ipc[state.añoEjec]?.[mc]||0;
+
+  const COLS=[
+    {key:'prodS1',     label:'Bonif. Prod S1',    ibc:true},
+    {key:'prodS2',     label:'Bonif. Prod S2',    ibc:true},
+    {key:'servicios',  label:'Bonif. Servicios',  ibc:true},
+    {key:'primaServ',  label:'Prima Servicios'},
+    {key:'primaVac',   label:'Prima Vacaciones'},
+    {key:'sueldoVac10',label:'Sueldo Vac.(1/10)'},
+    {key:'primaNov',   label:'Prima Navidad'},
+    {key:'cesantias',  label:'Cesantías'},
+    {key:'intereses',  label:'Intereses Ces.'},
+  ];
+
+  // ── HOJA 1: RESUMEN ────────────────────────────────────
+  const resRows = [];
+
+  // Encabezado del documento
+  const cargosUsadosStr=[...new Set(state.cargosUsados.map(c=>c.cargo))].join(', ');
+  const entidadesStr=[...new Set(state.cargosUsados.map(c=>c.entidad))].join(', ');
+  const añosStr=Object.keys(state.ps).sort().join(' - ');
+
+  resRows.push(['LIQUIDACIÓN DE PRESTACIONES SOCIALES SOBRE BONIFICACIÓN JUDICIAL']);
+  resRows.push([]);
+  resRows.push(['NIP:', state.clienteNIP||'—', '', 'Nombre:', state.clienteNombre||'—']);
+  resRows.push(['Entidad:', entidadesStr, '', 'Cargo(s):', cargosUsadosStr]);
+  resRows.push(['Período:', añosStr, '', 'IPC Ejecutoria:', ipcEj+' ('+state.mesEjec+' '+state.añoEjec+')']);
+  resRows.push([]);
+
+  // Encabezados columnas
+  const hdrs=['Período','Días',...COLS.map(c=>c.label),'BRUTO','IBC','Deduc. 9%','NETO','IPC Inicial','Factor','NETO INDEXADO'];
+  resRows.push(hdrs);
+
+  let gB=0,gIBC=0,gD=0,gN=0,gX=0;
+  const colTots={};COLS.forEach(c=>{colTots[c.key]=0;});
+
+  Object.keys(state.ps).sort((a,b)=>Number(a)-Number(b)).forEach(año=>{
+    // Fila separador año
+    resRows.push(['── AÑO '+año+' ──']);
+
+    MESES.forEach(mes=>{
+      const dMes=(state.lxm[año]?.[mes]||[]).reduce((s,f)=>s+f.dias,0);
+      const vC={};let bruto=0,ibc=0;
+      COLS.forEach(col=>{
+        const mpKey=col.key==='sueldoVac10'?'sueldoVac':col.key;
+        if(getMesPago(año,mpKey)===mes){
+          const v=getValPrest(col.key,parseInt(año));
+          vC[col.key]=v.b; bruto+=v.b; if(col.ibc)ibc+=v.b;
+        } else vC[col.key]=0;
+      });
+
+      // Solo filas con valores
+      if(bruto===0&&dMes===0) return;
+
+      const ded=ibc*0.09, neto=bruto-ded;
+      const mc2=MESES_C[MESES.indexOf(mes)];
+      const ipcIni=APPD.ipc[parseInt(año)]?.[mc2]||0;
+      const factor=(ipcIni&&ipcEj)?ipcEj/ipcIni:1;
+      const nIdx=neto*factor;
+
+      gB+=bruto;gIBC+=ibc;gD+=ded;gN+=neto;gX+=nIdx;
+      COLS.forEach(c=>{colTots[c.key]+=(vC[c.key]||0);});
+
+      resRows.push([
+        mes+' '+año, dMes,
+        ...COLS.map(c=>Math.round(vC[c.key]||0)),
+        Math.round(bruto), Math.round(ibc), Math.round(ded),
+        Math.round(neto), ipcIni, parseFloat(factor.toFixed(4)),
+        Math.round(nIdx)
+      ]);
+    });
+  });
+
+  // Fila totales
+  resRows.push([]);
+  resRows.push([
+    'TOTALES', '',
+    ...COLS.map(c=>Math.round(colTots[c.key])),
+    Math.round(gB), Math.round(gIBC), Math.round(gD),
+    Math.round(gN), '', '', Math.round(gX)
+  ]);
+  resRows.push(['DIFERENCIA POR INDEXACIÓN', '', ...Array(COLS.length+5).fill(''), Math.round(gX-gN)]);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(resRows);
+
+  // Anchos de columna
+  ws1['!cols'] = [
+    {wch:18},{wch:6},
+    ...COLS.map(()=>({wch:13})),
+    {wch:13},{wch:10},{wch:10},{wch:13},{wch:9},{wch:8},{wch:14}
+  ];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Resumen Liquidación');
+
+  // ── HOJA 2: INTERESES MORATORIOS ───────────────────────
+  const intRows = [];
+  intRows.push(['LIQUIDACIÓN DE INTERESES MORATORIOS']);
+  intRows.push([]);
+  intRows.push(['NIP:', state.clienteNIP||'—', '', 'Nombre:', state.clienteNombre||'—']);
+  intRows.push([]);
+
+  if(intTramos.length){
+    const capital=parseCapital();
+    const totalInt=intTramos.reduce((s,t)=>s+t.interes,0);
+    const total=capital+totalInt;
+    const pctDesc=(parseFloat(document.getElementById('int-descuento')?.value)||15.5)/100;
+    const desc=total*pctDesc;
+
+    intRows.push(['Capital nominal sentencia:', Math.round(capital)]);
+    intRows.push(['Fecha inicio (ejecutoria):', document.getElementById('int-fecha-ini')?.value||'—']);
+    intRows.push(['Fecha radicación:', document.getElementById('int-fecha-rad')?.value||'—']);
+    intRows.push(['Fecha corte:', document.getElementById('int-fecha-fin')?.value||'—']);
+    intRows.push(['Meses tasa DTF:', document.getElementById('int-meses-dtf')?.value||10]);
+    intRows.push(['Factor usura:', document.getElementById('int-factor-usura')?.value||1.5]);
+    intRows.push([]);
+
+    // Encabezado tabla
+    intRows.push(['#','Desde','Hasta','Días','Etapa','Tasa EA %','Tasa Período %','Interés tramo','Estado']);
+
+    intTramos.forEach(t=>{
+      intRows.push([
+        t.n, fmtDate(t.desde), fmtDate(t.hasta), t.dias,
+        t.etapa, parseFloat(t.tasaEA.toFixed(2)),
+        parseFloat(t.tasaPeriodo.toFixed(4)),
+        Math.round(t.interes),
+        t.suspendido?'Suspendido':'Activo'
+      ]);
+    });
+
+    intRows.push([]);
+    intRows.push(['RESUMEN']);
+    intRows.push(['Capital nominal', Math.round(capital)]);
+    intRows.push(['Total intereses moratorios', Math.round(totalInt)]);
+    intRows.push(['TOTAL A PAGAR', Math.round(total)]);
+    intRows.push(['Descuento '+(pctDesc*100).toFixed(1)+'%', Math.round(desc)]);
+    intRows.push(['VALOR COMPRA (neto)', Math.round(total-desc)]);
+  } else {
+    intRows.push(['No se han calculado intereses moratorios.']);
+    intRows.push(['Vaya a la pestaña Intereses Moratorios, ingrese los datos y calcule.']);
+  }
+
+  const ws2 = XLSX.utils.aoa_to_sheet(intRows);
+  ws2['!cols']=[{wch:6},{wch:13},{wch:13},{wch:6},{wch:8},{wch:10},{wch:13},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Intereses Moratorios');
+
+  // Descargar
+  const nombre=(state.clienteNombre||'liquidacion').replace(/ /g,'_');
+  const nip=state.clienteNIP?'_'+state.clienteNIP:'';
+  XLSX.writeFile(wb, 'Liquidacion'+nip+'_'+nombre+'.xlsx');
 }
 
 init();
