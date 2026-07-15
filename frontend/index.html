@@ -141,9 +141,9 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
     <div class="cb">
       <div class="grid2">
         <div class="fg"><label>NIP / Número de identificación</label>
-          <input type="text" id="cli-nip" placeholder="Ej: 12345678" oninput="state.clienteNIP=this.value"></div>
+          <input type="text" id="cli-nip" placeholder="Ej: 12345678" oninput="state.clienteNIP=this.value;autoGuardarLocal()"></div>
         <div class="fg"><label>Nombre del cliente</label>
-          <input type="text" id="cli-nombre" placeholder="Nombre completo" oninput="state.clienteNombre=this.value"></div>
+          <input type="text" id="cli-nombre" placeholder="Nombre completo" oninput="state.clienteNombre=this.value;autoGuardarLocal()"></div>
       </div>
     </div>
   </div>
@@ -173,6 +173,7 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
       </div>
       <div class="bgrp no-print">
         <button class="btn btn-p" onclick="buildLxM()">🔄 Generar tabla de meses</button>
+        <button class="btn btn-o" onclick="nuevaLiquidacion()">🆕 Nueva liquidación</button>
       </div>
     </div>
   </div>
@@ -705,6 +706,7 @@ function addFilaMes(a,m){
   }
   state.lxm[a][m].push({entidad:entAnt, cargo:cargoAnt, dias:30});
   renderFilasMes(a,m,mi);
+  autoGuardarLocal();
 }
 
 function quitarFila(a,m,fi){
@@ -720,6 +722,7 @@ function onLxMEntidad(a,m,fi,val){
 }
 
 function onLxMCargo(a,m,fi,val){
+  autoGuardarLocal();
   state.lxm[a][m][fi].cargo=val;
   const mi=MESES.indexOf(m);
   const f=state.lxm[a][m][fi];
@@ -729,6 +732,7 @@ function onLxMCargo(a,m,fi,val){
 
 function onLxMDias(a,m,fi,val){
   state.lxm[a][m][fi].dias=parseInt(val)||30;
+  autoGuardarLocal();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -912,6 +916,7 @@ function calcularTodo(){
   buildMesesPagoSelects();
   buildSelectorCargos();
   _marcarCambio();
+  autoGuardarLocal();
   showTab('tab-ps');
 }
 
@@ -1387,7 +1392,7 @@ function _marcarCambio(){
 }
 async function _guardarHistorial(totales){
   const ahora=new Date();
-  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,años:state.años,lxm:state.lxm,mesesPagoAnual:state.mesesPagoAnual,selectorPrest:state.selectorPrest,mesEjec:state.mesEjec,añoEjec:state.añoEjec,gastosRep:state.gastosRep,gastosPct:state.gastosPct,diasVac:state.diasVac});
+  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,años:state.años,lxm:state.lxm,mesesPagoAnual:state.mesesPagoAnual,selectorPrestAnual:state.selectorPrestAnual,selectorPrest:state.selectorPrest,mesEjec:state.mesEjec,añoEjec:state.añoEjec,gastosRep:state.gastosRep,gastosPct:state.gastosPct,diasVac:state.diasVac});
   const entrada={
     id:Date.now(),
     fecha:ahora.toLocaleDateString('es-CO')+' '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
@@ -1436,14 +1441,19 @@ async function _cargarHist(id,fromAPI=false){
   if(!confirm('¿Cargar liquidación de '+nombre+'? Los datos actuales se perderán.'))return;
   try{
     const s=JSON.parse(snap);
-    Object.assign(state,{clienteNIP:s.clienteNIP||'',clienteNombre:s.clienteNombre||'',años:s.años||[],lxm:s.lxm||{},mesesPagoAnual:s.mesesPagoAnual||{},selectorPrest:s.selectorPrest||{},mesEjec:s.mesEjec||'Mayo',añoEjec:s.añoEjec||2025,gastosRep:s.gastosRep||false,gastosPct:s.gastosPct||33.33,diasVac:s.diasVac||22});
+    Object.assign(state,{clienteNIP:s.clienteNIP||'',clienteNombre:s.clienteNombre||'',años:s.años||[],lxm:s.lxm||{},mesesPagoAnual:s.mesesPagoAnual||{},selectorPrestAnual:s.selectorPrestAnual||{},selectorPrest:s.selectorPrest||{},mesEjec:s.mesEjec||'Mayo',añoEjec:s.añoEjec||2025,gastosRep:s.gastosRep||false,gastosPct:s.gastosPct||33.33,diasVac:s.diasVac||22});
     const n=document.getElementById('cli-nip');if(n)n.value=state.clienteNIP;
     const nm=document.getElementById('cli-nombre');if(nm)nm.value=state.clienteNombre;
     const dv=document.getElementById('g-diasVac');if(dv)dv.value=state.diasVac;
     const gr=document.getElementById('g-gastosRep');if(gr){gr.checked=state.gastosRep;onGastosChange();}
     document.querySelectorAll('[id^="año-btn-"]').forEach(b=>{b.classList.remove('btn-p');b.classList.add('btn-o');});
     state.años.forEach(a=>{const b=document.getElementById('año-btn-'+a);if(b){b.classList.remove('btn-o');b.classList.add('btn-p');}});
-    calcularTodo();showTab('tab-lxm');alert('✅ Liquidación cargada.');
+    calcularTodo();
+    // Restaurar meses de pago y selectores en UI
+    const meEl=document.getElementById('r-mesEjec'); if(meEl) meEl.value=state.mesEjec;
+    const aeEl=document.getElementById('r-añoEjec'); if(aeEl) aeEl.value=state.añoEjec;
+    showTab('tab-lxm');
+    alert('✅ Liquidación de '+nombre+' cargada. Vaya al Resumen para ver los resultados.');
   }catch(e){alert('Error: '+e.message);}
 }
 async function _eliminarHist(id,fromAPI=false){
@@ -1701,9 +1711,98 @@ function exportarInteresesCSV(){
 
 function initExtras(){ renderTablaIPC(); renderTablaTasas(); }
 
+
+// ══════════════════════════════════════════════════════════
+// AUTO-GUARDADO LOCAL — persiste LxM, NIP, nombre entre sesiones
+// ══════════════════════════════════════════════════════════
+function autoGuardarLocal(){
+  try{
+    const snap={
+      clienteNIP:state.clienteNIP, clienteNombre:state.clienteNombre,
+      años:state.años, lxm:state.lxm, mesesPagoAnual:state.mesesPagoAnual,
+      selectorPrestAnual:state.selectorPrestAnual,
+      mesEjec:state.mesEjec, añoEjec:state.añoEjec,
+      gastosRep:state.gastosRep, gastosPct:state.gastosPct, diasVac:state.diasVac
+    };
+    localStorage.setItem('liq_sesion_activa', JSON.stringify(snap));
+  }catch(e){ console.warn('No se pudo autoguardar:', e); }
+}
+
+function restaurarSesionLocal(){
+  try{
+    const raw = localStorage.getItem('liq_sesion_activa');
+    if(!raw) return;
+    const s = JSON.parse(raw);
+    if(!s.años?.length) return; // sesión vacía, no restaurar
+
+    Object.assign(state,{
+      clienteNIP:  s.clienteNIP||'',
+      clienteNombre: s.clienteNombre||'',
+      años:        s.años||[],
+      lxm:         s.lxm||{},
+      mesesPagoAnual: s.mesesPagoAnual||{},
+      selectorPrestAnual: s.selectorPrestAnual||{},
+      mesEjec:     s.mesEjec||'Mayo',
+      añoEjec:     s.añoEjec||2025,
+      gastosRep:   s.gastosRep||false,
+      gastosPct:   s.gastosPct||33.33,
+      diasVac:     s.diasVac||22
+    });
+
+    // Restaurar UI
+    const nipEl=document.getElementById('cli-nip');
+    if(nipEl) nipEl.value=state.clienteNIP;
+    const nomEl=document.getElementById('cli-nombre');
+    if(nomEl) nomEl.value=state.clienteNombre;
+    const dvEl=document.getElementById('g-diasVac');
+    if(dvEl) dvEl.value=state.diasVac;
+    const grEl=document.getElementById('g-gastosRep');
+    if(grEl){ grEl.checked=state.gastosRep; onGastosChange(); }
+
+    // Marcar años activos
+    document.querySelectorAll('[id^="año-btn-"]').forEach(b=>{
+      b.classList.remove('btn-p'); b.classList.add('btn-o');
+    });
+    state.años.forEach(a=>{
+      const b=document.getElementById('año-btn-'+a);
+      if(b){ b.classList.remove('btn-o'); b.classList.add('btn-p'); }
+    });
+
+    // Reconstruir LxM visualmente
+    if(state.años.length) buildLxM();
+
+    console.log('Sesión restaurada para:', state.clienteNombre||'(sin nombre)');
+  }catch(e){ console.warn('No se pudo restaurar sesión:', e); }
+}
+
+
+function nuevaLiquidacion(){
+  if(!confirm('¿Iniciar una nueva liquidación? Los datos actuales se borrarán de la pantalla (quedan guardados en el Historial si ya generó el resumen).')) return;
+  // Limpiar state
+  state.clienteNIP=''; state.clienteNombre='';
+  state.años=[]; state.lxm={}; state.mesesPagoAnual={};
+  state.selectorPrestAnual={}; state.ps={}; state._hashResumen='';
+  // Limpiar UI
+  const nipEl=document.getElementById('cli-nip'); if(nipEl) nipEl.value='';
+  const nomEl=document.getElementById('cli-nombre'); if(nomEl) nomEl.value='';
+  // Desmarcar años
+  document.querySelectorAll('[id^="año-btn-"]').forEach(b=>{b.classList.remove('btn-p');b.classList.add('btn-o');});
+  // Limpiar contenedores
+  document.getElementById('lxm-container').innerHTML='';
+  document.getElementById('ps-container').innerHTML='<div class="info-box">💡 Complete el Liquidador por Mes y presione Calcular.</div>';
+  document.getElementById('resumen-container').innerHTML='';
+  document.getElementById('r-sel-cargos').innerHTML='';
+  document.getElementById('r-meses-pago-container').innerHTML='';
+  // Limpiar sesión activa
+  localStorage.removeItem('liq_sesion_activa');
+  showTab('tab-lxm');
+  alert('✅ Nueva liquidación iniciada.');
+}
+
 init();
 renderHistorial();
 initExtras();
+restaurarSesionLocal();
 </script>
 </body>
 </html
