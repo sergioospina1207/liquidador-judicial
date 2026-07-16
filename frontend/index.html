@@ -775,12 +775,20 @@ function filtrarCargos(){ renderCargosTable(); }
 function editarCargo(e,c,a,campo,val){
   const num=parseFloat(val.replace(/,/g,''))||0;
   const row=DB.find(d=>d.e===e&&d.c===c&&d.a===a);
-  if(row) row[campo]=num;
+  if(row){
+    row[campo]=num;
+    // Guardar en API
+    apiCall('POST','/api/cargos',{entidad:e,cargo:c,año:a,bonificacion:row.b,salario:row.s});
+    // Guardar en localStorage
+    _guardarCargosLocal();
+  }
 }
 
 function eliminarCargo(e,c,a){
-  if(!confirm(`¿Eliminar ${c} (${e}) año ${a}?`)) return;
+  if(!confirm('¿Eliminar '+c+' ('+e+') año '+a+'?')) return;
   DB=DB.filter(d=>!(d.e===e&&d.c===c&&d.a===a));
+  apiCall('DELETE','/api/cargos?entidad='+encodeURIComponent(e)+'&cargo='+encodeURIComponent(c)+'&año='+a);
+  _guardarCargosLocal();
   renderCargosTable();
 }
 
@@ -802,9 +810,13 @@ function añadirCargo(){
     if(ent==='RAMA'&&!APPD.rama.includes(cargo)) APPD.rama.push(cargo);
     if(ent==='FISCALÍA'&&!APPD.fisc.includes(cargo)) APPD.fisc.push(cargo);
   }
+  // Guardar en API y localStorage
+  const r2=DB.find(d=>d.e===ent&&d.c===cargo&&d.a===año);
+  apiCall('POST','/api/cargos',{entidad:ent,cargo,año,bonificacion:r2?.b||bon,salario:r2?.s||sal});
+  _guardarCargosLocal();
   renderCargosTable();
   ['nc-cargo','nc-bon','nc-sal'].forEach(id=>document.getElementById(id).value='');
-  alert('✅ Cargo añadido correctamente');
+  alert('✅ Cargo añadido/actualizado correctamente');
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2107,7 +2119,62 @@ function _generarExcel(){
   XLSX.writeFile(wb, 'Liquidacion'+nip+'_'+nombre+'.xlsx');
 }
 
+
+// ══════════════════════════════════════════════════════════
+// PERSISTENCIA DE CARGOS CUSTOM EN localStorage
+// ══════════════════════════════════════════════════════════
+function _guardarCargosLocal(){
+  // Solo guardar los cargos que NO están en APPD.data original
+  const customCargos = DB.filter(d=>{
+    const orig = APPD.data.find(o=>o.e===d.e&&o.c===d.c&&o.a===d.a);
+    return !orig || orig.b!==d.b || orig.s!==d.s;
+  });
+  localStorage.setItem('liq_cargos_custom', JSON.stringify(customCargos));
+}
+
+function _cargarCargosLocal(){
+  try{
+    const raw=localStorage.getItem('liq_cargos_custom');
+    if(!raw) return;
+    const custom=JSON.parse(raw);
+    custom.forEach(d=>{
+      const idx=DB.findIndex(o=>o.e===d.e&&o.c===d.c&&o.a===d.a);
+      if(idx>=0){ DB[idx]=d; }
+      else {
+        DB.push(d);
+        if(d.e==='RAMA'&&!APPD.rama.includes(d.c)) APPD.rama.push(d.c);
+        if(d.e==='FISCALÍA'&&!APPD.fisc.includes(d.c)) APPD.fisc.push(d.c);
+      }
+    });
+    if(custom.length) console.log('Cargos custom restaurados desde localStorage:', custom.length);
+  }catch(e){ console.warn('Error cargando cargos custom:', e); }
+}
+
+async function _sincronizarCargosAPI(){
+  // Al iniciar, traer cargos modificados del servidor y aplicarlos
+  try{
+    const res = await apiCall('GET','/api/cargos');
+    if(!res?.data?.length) return;
+    res.data.forEach(d=>{
+      const row={e:d.entidad, c:d.cargo, a:d.año, b:d.bonificacion, s:d.salario};
+      const idx=DB.findIndex(o=>o.e===row.e&&o.c===row.c&&o.a===row.a);
+      if(idx>=0){ DB[idx]=row; }
+      else {
+        DB.push(row);
+        if(row.e==='RAMA'&&!APPD.rama.includes(row.c)) APPD.rama.push(row.c);
+        if(row.e==='FISCALÍA'&&!APPD.fisc.includes(row.c)) APPD.fisc.push(row.c);
+      }
+    });
+    // Actualizar localStorage con datos del servidor
+    _guardarCargosLocal();
+    console.log('Cargos sincronizados desde servidor:', res.data.length);
+    renderCargosTable();
+  }catch(e){ console.warn('No se pudieron sincronizar cargos:', e); }
+}
+
 init();
+_cargarCargosLocal();
+_sincronizarCargosAPI();
 renderHistorial();
 initExtras();
 restaurarSesionLocal();
