@@ -1705,32 +1705,77 @@ function calcularIntereses(){
   const fr=document.getElementById('int-fecha-rad').value;
   const ff=document.getElementById('int-fecha-fin').value;
   if(!fi||!ff){alert('Ingrese fecha inicio y fecha fin');return;}
-  const fechaIni=new Date(fi+'T00:00:00');
-  const fechaRad=fr?new Date(fr+'T00:00:00'):null;
-  const fechaFin=new Date(ff+'T00:00:00');
-  const mesesDTF=parseInt(document.getElementById('int-meses-dtf').value)||10;
-  const plazoRad=parseInt(document.getElementById('int-plazo-rad').value)||3;
-  const factorUsura=parseFloat(document.getElementById('int-factor-usura').value)||1.5;
-  const fechaLimRad=_addMeses(fechaIni,plazoRad);
-  const finDTF=_addMeses(fechaIni,mesesDTF);
-  const radTarde=!!(fechaRad&&fechaRad>fechaLimRad);
-  intTramos=[];
-  let desde=new Date(fechaIni); let tramo=1;
-  while(desde<fechaFin){
-    const finMes=new Date(desde.getFullYear(),desde.getMonth()+1,0);
-    const hasta=finMes<fechaFin?finMes:new Date(fechaFin.getTime()-86400000);
-    const suspendido=!!(radTarde&&fechaRad&&desde>fechaLimRad&&desde<fechaRad);
-    const dias=suspendido?0:Math.round((hasta-desde)/86400000)+1;
-    const key=_dateKey(desde);
-    const etapa=desde<finDTF?'DTF':'Usura';
-    const tasaEA=etapa==='DTF'?_getTasaDTF(key):_getTasaCorr(key)*factorUsura;
-    // Método Excel: tasa diaria efectiva = (1+EA)^(1/365)-1, luego × días
-    const tasaDiaria=Math.pow(1+tasaEA/100, 1/365)-1;
-    const tasaPeriodo=dias>0?(tasaDiaria*dias)*100:0;
-    const interes=capital*tasaDiaria*dias;
-    intTramos.push({n:tramo++,desde:new Date(desde),hasta:new Date(hasta),dias,etapa,tasaEA,tasaPeriodo,interes,suspendido});
-    desde=new Date(hasta.getTime()+86400000);
+
+  const fechaIni = new Date(fi+'T00:00:00');
+  const fechaRad = fr ? new Date(fr+'T00:00:00') : null;
+  const fechaFin = new Date(ff+'T00:00:00');
+  const mesesDTF    = parseInt(document.getElementById('int-meses-dtf').value)||10;
+  const plazoRad    = parseInt(document.getElementById('int-plazo-rad').value)||3;
+  const factorUsura = parseFloat(document.getElementById('int-factor-usura').value)||1.5;
+
+  // Fechas clave exactas (día calendario)
+  const fechaLimRad = _addMeses(fechaIni, plazoRad);   // límite para radicar
+  const finDTF      = _addMeses(fechaIni, mesesDTF);   // cambio DTF → Usura
+  const radTarde    = !!(fechaRad && fechaRad > fechaLimRad);
+
+  // ── Construir puntos de corte ──────────────────────────
+  // Los tramos se parten en: inicio de cada mes, fechaLimRad, fechaRad, finDTF
+  const MS = 24*60*60*1000;
+  const puntoSet = new Set();
+
+  // Añadir inicio de cada mes entre fechaIni y fechaFin
+  let cur = new Date(fechaIni.getFullYear(), fechaIni.getMonth(), 1);
+  while(cur <= fechaFin){
+    puntoSet.add(cur.getTime());
+    cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
   }
+  // Añadir fechas clave
+  puntoSet.add(fechaIni.getTime());
+  puntoSet.add(fechaFin.getTime());
+  if(radTarde){
+    puntoSet.add(fechaLimRad.getTime());  // inicio suspensión
+    if(fechaRad) puntoSet.add(fechaRad.getTime()); // fin suspensión
+  }
+  puntoSet.add(finDTF.getTime()); // cambio de etapa
+
+  // Ordenar y filtrar solo puntos dentro del rango
+  const puntos = [...puntoSet]
+    .map(t=>new Date(t))
+    .filter(d=>d>=fechaIni && d<=fechaFin)
+    .sort((a,b)=>a-b);
+
+  // ── Generar tramos ─────────────────────────────────────
+  intTramos = [];
+  for(let i=0; i<puntos.length-1; i++){
+    const desde = puntos[i];
+    const hasta = new Date(puntos[i+1].getTime() - MS); // día anterior al siguiente punto
+
+    // Suspendido: desde >= fechaLimRad Y hasta < fechaRad
+    const suspendido = radTarde && fechaRad &&
+      desde >= fechaLimRad && hasta < fechaRad;
+
+    const dias = suspendido ? 0 : Math.round((hasta-desde)/MS)+1;
+    const etapa = desde < finDTF ? 'DTF' : 'Usura';
+    const key = _dateKey(desde);
+    const tasaEA = etapa==='DTF' ? _getTasaDTF(key) : _getTasaCorr(key)*factorUsura;
+
+    // Método Excel: tasa diaria = (1+EA)^(1/365)-1, interés = capital × tasa_diaria × días
+    const tasaDiaria = Math.pow(1+tasaEA/100, 1/365)-1;
+    const tasaPeriodo = dias>0 ? (tasaDiaria*dias)*100 : 0;
+    const interes = capital*tasaDiaria*dias;
+
+    // Estado descriptivo
+    let estado = suspendido ? 'Suspendido' : 'Activo';
+    if(!suspendido && radTarde && fechaRad && desde.getTime()===fechaRad.getTime())
+      estado = 'Reactivado';
+
+    intTramos.push({
+      n: i+1, desde: new Date(desde), hasta: new Date(hasta),
+      dias, etapa, tasaEA, tasaDiaria, tasaPeriodo, interes,
+      suspendido, estado
+    });
+  }
+
   _renderIntereses(capital,fechaIni,fechaRad,fechaFin,fechaLimRad,finDTF,radTarde,mesesDTF,plazoRad,factorUsura);
 }
 
@@ -1762,7 +1807,7 @@ function _renderIntereses(capital,fechaIni,fechaRad,fechaFin,fechaLimRad,finDTF,
       +'<td class="r mono">'+t.tasaEA.toFixed(2)+'%</td>'
       +'<td class="r mono">'+t.tasaPeriodo.toFixed(4)+'%</td>'
       +'<td class="r mono" style="font-weight:600">$'+fmt(t.interes)+'</td>'
-      +'<td>'+(t.suspendido?'<span class="badge b-rj">Suspendido</span>':'<span class="badge b-vd">Activo</span>')+'</td>';
+      +'<td>'+(t.suspendido?'<span class="badge b-rj">Suspendido</span>':(t.estado==='Reactivado'?'<span class="badge b-or">Reactivado</span>':'<span class="badge b-vd">Activo</span>'))+'</td>';
     tbody.appendChild(tr);
   });
   const trTot=document.createElement('tr'); trTot.className='tot';
