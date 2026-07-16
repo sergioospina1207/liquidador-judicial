@@ -1724,8 +1724,10 @@ function calcularIntereses(){
     const key=_dateKey(desde);
     const etapa=desde<finDTF?'DTF':'Usura';
     const tasaEA=etapa==='DTF'?_getTasaDTF(key):_getTasaCorr(key)*factorUsura;
-    const tasaPeriodo=dias>0?(Math.pow(1+tasaEA/100,dias/365)-1)*100:0;
-    const interes=capital*tasaPeriodo/100;
+    // Método Excel: tasa diaria efectiva = (1+EA)^(1/365)-1, luego × días
+    const tasaDiaria=Math.pow(1+tasaEA/100, 1/365)-1;
+    const tasaPeriodo=dias>0?(tasaDiaria*dias)*100:0;
+    const interes=capital*tasaDiaria*dias;
     intTramos.push({n:tramo++,desde:new Date(desde),hasta:new Date(hasta),dias,etapa,tasaEA,tasaPeriodo,interes,suspendido});
     desde=new Date(hasta.getTime()+86400000);
   }
