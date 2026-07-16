@@ -1392,7 +1392,7 @@ function _marcarCambio(){
 }
 async function _guardarHistorial(totales){
   const ahora=new Date();
-  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,años:state.años,lxm:state.lxm,mesesPagoAnual:state.mesesPagoAnual,selectorPrestAnual:state.selectorPrestAnual,selectorPrest:state.selectorPrest,mesEjec:state.mesEjec,añoEjec:state.añoEjec,gastosRep:state.gastosRep,gastosPct:state.gastosPct,diasVac:state.diasVac});
+  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,años:state.años,lxm:state.lxm,mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct});
   const entrada={
     id:Date.now(),
     fecha:ahora.toLocaleDateString('es-CO')+' '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
@@ -1475,26 +1475,38 @@ async function _cargarHist(id,fromAPI=false){
   if(!confirm('¿Cargar liquidación de '+nombre+'? Los datos actuales se perderán.'))return;
   try{
     const s=JSON.parse(snap);
-    Object.assign(state,{clienteNIP:s.clienteNIP||'',clienteNombre:s.clienteNombre||'',años:s.años||[],lxm:s.lxm||{},mesesPagoAnual:s.mesesPagoAnual||{},selectorPrestAnual:s.selectorPrestAnual||{},selectorPrest:s.selectorPrest||{},mesEjec:s.mesEjec||'Mayo',añoEjec:s.añoEjec||2025,gastosRep:s.gastosRep||false,gastosPct:s.gastosPct||33.33,diasVac:s.diasVac||22});
+    // Restaurar solo lo esencial: NIP, nombre, años, LxM
+    Object.assign(state,{
+      clienteNIP:s.clienteNIP||'', clienteNombre:s.clienteNombre||'',
+      años:s.años||[], lxm:s.lxm||{},
+      mesEjec:s.mesEjec||'Mayo', añoEjec:s.añoEjec||2025,
+      diasVac:s.diasVac||22, gastosRep:s.gastosRep||false, gastosPct:s.gastosPct||33.33
+    });
+    // Restaurar UI
     const n=document.getElementById('cli-nip');if(n)n.value=state.clienteNIP;
     const nm=document.getElementById('cli-nombre');if(nm)nm.value=state.clienteNombre;
     const dv=document.getElementById('g-diasVac');if(dv)dv.value=state.diasVac;
     const gr=document.getElementById('g-gastosRep');if(gr){gr.checked=state.gastosRep;onGastosChange();}
+    // Marcar años
     document.querySelectorAll('[id^="año-btn-"]').forEach(b=>{b.classList.remove('btn-p');b.classList.add('btn-o');});
     state.años.forEach(a=>{const b=document.getElementById('año-btn-'+a);if(b){b.classList.remove('btn-o');b.classList.add('btn-p');}});
-    calcularTodo();
-    // Restaurar meses de pago y selectores en UI
-    const meEl=document.getElementById('r-mesEjec'); if(meEl) meEl.value=state.mesEjec;
-    const aeEl=document.getElementById('r-añoEjec'); if(aeEl) aeEl.value=state.añoEjec;
+    // Reconstruir LxM visualmente sin calcular
+    buildLxM();
     showTab('tab-lxm');
-    alert('✅ Liquidación de '+nombre+' cargada. Vaya al Resumen para ver los resultados.');
+    alert('✅ '+nombre+' cargado. Revise el Liquidador por Mes y presione Calcular cuando esté listo.');
   }catch(e){alert('Error: '+e.message);}
 }
 async function _eliminarHist(id,fromAPI=false){
-  if(!confirm('¿Eliminar?'))return;
-  if(fromAPI)await apiCall('DELETE','/api/historial/'+id);
+  if(!confirm('¿Eliminar esta liquidación?'))return;
+  // Eliminar en servidor
+  if(fromAPI){
+    const res=await apiCall('DELETE','/api/historial/'+id);
+    if(!res?.ok){ alert('No se pudo eliminar del servidor'); return; }
+  }
+  // Eliminar en localStorage
   let hist=[];try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
-  localStorage.setItem('liq_hist',JSON.stringify(hist.filter(h=>String(h.id)!==String(id))));
+  hist=hist.filter(h=>String(h.id)!==String(id));
+  localStorage.setItem('liq_hist',JSON.stringify(hist));
   await renderHistorial();
 }
 async function limpiarHistorial(){
