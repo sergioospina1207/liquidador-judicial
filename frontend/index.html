@@ -1417,18 +1417,45 @@ function _renderTablaHistorial(cont, hist, origen){
     cont.innerHTML='<p style="color:var(--tx2);font-size:13px">No hay liquidaciones guardadas. ('+origen+')</p>';
     return;
   }
-  const tbl=document.createElement('table');tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
+  const wrap=document.createElement('div');
+  wrap.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+hist.length+' liquidaciones</div>';
+  const tbl=document.createElement('table');
+  tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
   tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th>Acciones</th></tr></thead>';
   const tbody=document.createElement('tbody');
   hist.forEach((h,i)=>{
-    const tr=document.createElement('tr');if(i%2===0)tr.style.background='var(--g1)';
-    const hId=JSON.stringify(String(h.id));const hApi=JSON.stringify(h._api||false);
-    tr.innerHTML='<td style="font-size:11px;white-space:nowrap">'+h.fecha+'</td><td><strong>'+h.nip+'</strong></td><td>'+h.nombre+'</td><td><span class="badge b-az" style="font-size:10px">'+h.años+'</span></td><td style="font-size:11px">'+h.mesEjec+'</td><td class="r mono">$'+fmt(h.totalBruto)+'</td><td class="r mono">$'+fmt(h.totalNeto)+'</td><td class="r mono" style="font-weight:700;color:var(--vd)">$'+fmt(h.totalIndexado)+'</td><td style="white-space:nowrap"><button class="btn btn-xs btn-p" onclick="_cargarHist('+hId+','+hApi+')">📂 Cargar</button> <button class="btn btn-xs btn-r" onclick="_eliminarHist('+hId+','+hApi+')">✕</button></td>';
+    const tr=document.createElement('tr');
+    if(i%2===0) tr.style.background='var(--g1)';
+    // Celdas de datos
+    tr.innerHTML=
+      '<td style="font-size:11px;white-space:nowrap">'+h.fecha+'</td>'+
+      '<td><strong>'+(h.nip||'—')+'</strong></td>'+
+      '<td>'+(h.nombre||'—')+'</td>'+
+      '<td><span class="badge b-az" style="font-size:10px">'+(h.años||'')+'</span></td>'+
+      '<td style="font-size:11px">'+(h.mesEjec||h.mes_ejec||'')+'</td>'+
+      '<td class="r mono">$'+fmt(h.totalBruto||h.total_bruto||0)+'</td>'+
+      '<td class="r mono">$'+fmt(h.totalNeto||h.total_neto||0)+'</td>'+
+      '<td class="r mono" style="font-weight:700;color:var(--vd)">$'+fmt(h.totalIndexado||h.total_indexado||0)+'</td>'+
+      '<td style="white-space:nowrap"></td>';
+    // Botones con event listeners (evita problemas de escape)
+    const td=tr.lastElementChild;
+    const btnCargar=document.createElement('button');
+    btnCargar.className='btn btn-xs btn-p';
+    btnCargar.textContent='📂 Cargar';
+    btnCargar.onclick=()=>_cargarHist(h.id, h._api||false, h.snap||null);
+    const btnElim=document.createElement('button');
+    btnElim.className='btn btn-xs btn-r';
+    btnElim.textContent='✕';
+    btnElim.style.marginLeft='4px';
+    btnElim.onclick=()=>_eliminarHist(h.id, h._api||false);
+    td.appendChild(btnCargar);
+    td.appendChild(btnElim);
     tbody.appendChild(tr);
   });
   tbl.appendChild(tbody);
-  cont.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+hist.length+' liquidaciones</div>';
-  cont.appendChild(tbl);
+  wrap.appendChild(tbl);
+  cont.innerHTML='';
+  cont.appendChild(wrap);
 }
 
 async function renderHistorial(){
@@ -1467,12 +1494,26 @@ async function renderHistorial(){
   if(!hist.length){cont.innerHTML='<p style="color:var(--tx2);font-size:13px">No hay liquidaciones guardadas. ('+origen+')</p>';return;}
   _renderTablaHistorial(cont, hist, origen);
 }
-async function _cargarHist(id,fromAPI=false){
-  let snap=null,nombre='';
-  if(fromAPI){const res=await apiCall('GET','/api/historial');const h=res?.data?.find(x=>x.id==id);if(h){snap=h.snap;nombre=h.nombre;}}
-  if(!snap){let hist=[];try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}const h=hist.find(x=>String(x.id)===String(id));if(h){snap=h.snap;nombre=h.nombre;}}
-  if(!snap){alert('No encontrado');return;}
-  if(!confirm('¿Cargar liquidación de '+nombre+'? Los datos actuales se perderán.'))return;
+async function _cargarHist(id, fromAPI=false, snapDirecto=null){
+  let snap=snapDirecto||null, nombre='';
+  // Si no viene el snap directo, buscarlo
+  if(!snap){
+    if(fromAPI){
+      const res=await apiCall('GET','/api/historial');
+      const h=res?.data?.find(x=>x.id==id);
+      if(h){snap=h.snap;nombre=h.nombre;}
+    }
+    if(!snap){
+      let hist=[];try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
+      const h=hist.find(x=>String(x.id)===String(id));
+      if(h){snap=h.snap;nombre=h.nombre;}
+    }
+  } else {
+    // Extraer nombre del snap
+    try{const s=JSON.parse(snap);nombre=s.clienteNombre||'';}catch(e){}
+  }
+  if(!snap){alert('No se encontró la liquidación');return;}
+  if(!confirm('¿Cargar liquidación'+(nombre?' de '+nombre:'')+' ? Los datos actuales se perderán.'))return;
   try{
     const s=JSON.parse(snap);
     // Restaurar solo lo esencial: NIP, nombre, años, LxM
@@ -1496,15 +1537,15 @@ async function _cargarHist(id,fromAPI=false){
     alert('✅ '+nombre+' cargado. Revise el Liquidador por Mes y presione Calcular cuando esté listo.');
   }catch(e){alert('Error: '+e.message);}
 }
-async function _eliminarHist(id,fromAPI=false){
+async function _eliminarHist(id, fromAPI=false){
   if(!confirm('¿Eliminar esta liquidación?'))return;
-  // Eliminar en servidor
+  // Eliminar en servidor si viene de API
   if(fromAPI){
-    const res=await apiCall('DELETE','/api/historial/'+id);
-    if(!res?.ok){ alert('No se pudo eliminar del servidor'); return; }
+    await apiCall('DELETE','/api/historial/'+id);
   }
-  // Eliminar en localStorage
-  let hist=[];try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
+  // Siempre eliminar en localStorage
+  let hist=[];
+  try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
   hist=hist.filter(h=>String(h.id)!==String(id));
   localStorage.setItem('liq_hist',JSON.stringify(hist));
   await renderHistorial();
