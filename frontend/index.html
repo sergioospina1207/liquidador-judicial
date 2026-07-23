@@ -1849,6 +1849,7 @@ function calcularIntereses(){
   }
 
   _renderIntereses(capital,fechaIni,fechaRad,fechaFin,fechaLimRad,finDTF,radTarde,mesesDTF,plazoRad,factorUsura);
+  autoGuardarLocal();
 }
 
 function fmtDate(d){ if(!d||isNaN(d.getTime())) return '—'; return d.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}); }
@@ -1923,12 +1924,27 @@ function initExtras(){ renderTablaIPC(); renderTablaTasas(); }
 // ══════════════════════════════════════════════════════════
 function autoGuardarLocal(){
   try{
+    // Guardar parámetros de intereses
+    const intParams={
+      capital: document.getElementById('int-capital')?.value||'',
+      fechaIni: document.getElementById('int-fecha-ini')?.value||'',
+      fechaRad: document.getElementById('int-fecha-rad')?.value||'',
+      fechaFin: document.getElementById('int-fecha-fin')?.value||'',
+      mesesDTF: document.getElementById('int-meses-dtf')?.value||'10',
+      plazoRad: document.getElementById('int-plazo-rad')?.value||'3',
+      factorUsura: document.getElementById('int-factor-usura')?.value||'1.5',
+      descuento: document.getElementById('int-descuento')?.value||'15.5',
+    };
     const snap={
       clienteNIP:state.clienteNIP, clienteNombre:state.clienteNombre,
+      clienteEntidad:state.clienteEntidad||'', clienteCargo:state.clienteCargo||'',
+      clienteEjecutoria:state.clienteEjecutoria||'', clienteTurno:state.clienteTurno||'',
       años:state.años, lxm:state.lxm, mesesPagoAnual:state.mesesPagoAnual,
       selectorPrestAnual:state.selectorPrestAnual,
       mesEjec:state.mesEjec, añoEjec:state.añoEjec,
-      gastosRep:state.gastosRep, gastosPct:state.gastosPct, diasVac:state.diasVac
+      gastosRep:state.gastosRep, gastosPct:state.gastosPct, diasVac:state.diasVac,
+      resolucion:state.resolucion||false,
+      intParams
     };
     localStorage.setItem('liq_sesion_activa', JSON.stringify(snap));
   }catch(e){ console.warn('No se pudo autoguardar:', e); }
@@ -1976,6 +1992,32 @@ function restaurarSesionLocal(){
       if(b){ b.classList.remove('btn-o'); b.classList.add('btn-p'); }
     });
 
+    // Restaurar campos adicionales
+    const entEl2=document.getElementById('cli-entidad');if(entEl2)entEl2.value=s.clienteEntidad||'';
+    const carEl2=document.getElementById('cli-cargo');if(carEl2)carEl2.value=s.clienteCargo||'';
+    const ejEl2=document.getElementById('cli-ejecutoria');if(ejEl2)ejEl2.value=s.clienteEjecutoria||'';
+    const tuEl2=document.getElementById('cli-turno');if(tuEl2)tuEl2.value=s.clienteTurno||'';
+    if(s.resolucion!==undefined){
+      state.resolucion=s.resolucion;
+      const rEl=document.getElementById('g-resolucion');if(rEl)rEl.checked=s.resolucion;
+    }
+    // Restaurar parámetros de intereses
+    if(s.intParams){
+      const ip=s.intParams;
+      const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+      setV('int-capital',ip.capital);
+      setV('int-fecha-ini',ip.fechaIni);
+      setV('int-fecha-rad',ip.fechaRad);
+      setV('int-fecha-fin',ip.fechaFin);
+      setV('int-meses-dtf',ip.mesesDTF);
+      setV('int-plazo-rad',ip.plazoRad);
+      setV('int-factor-usura',ip.factorUsura);
+      setV('int-descuento',ip.descuento);
+      // Si tenía fechas completas, recalcular automáticamente
+      if(ip.capital&&ip.fechaIni&&ip.fechaFin){
+        setTimeout(()=>calcularIntereses(),300);
+      }
+    }
     // Reconstruir LxM visualmente
     if(state.años.length) buildLxM();
 
