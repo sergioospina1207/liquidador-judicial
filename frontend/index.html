@@ -301,6 +301,37 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
   </div>
 
   <div class="card no-print">
+    <div class="ch">💰 Honorarios</div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:center">
+        <div class="fg">
+          <label>Porcentaje de honorarios</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" id="hon-pct" value="30" min="0" max="100" step="0.1"
+              style="width:80px" oninput="state.honPct=parseFloat(this.value)||30">
+            <span style="font-size:13px;color:var(--tx2)">%</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>IVA sobre honorarios</label>
+          <div style="display:flex;gap:16px;margin-top:6px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="hon-iva" value="asume" id="hon-asume"
+                onchange="state.honIVA='asume'" checked>
+              <span style="font-size:13px">Entidad asume IVA</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="hon-iva" value="noasume" id="hon-noasume"
+                onchange="state.honIVA='noasume'">
+              <span style="font-size:13px">Entidad NO asume IVA (+19%)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card no-print">
     <div class="cb" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-s" onclick="generarResumen()">📊 Generar resumen</button>
       <button class="btn btn-o" onclick="window.print()">🖨️ Imprimir / PDF</button>
@@ -504,6 +535,8 @@ let DB = APPD.data.map(d=>({...d})); // copia mutable
 let state = {
   clienteNIP:'', clienteNombre:'', clienteEntidad:'', clienteCargo:'', clienteEjecutoria:'', clienteTurno:'',
   resolucion:false,
+  honPct:30,
+  honIVA:'asume',
   años: [],
   mesesPagoAnual:{},
   selectorPrestAnual:{},
@@ -1394,14 +1427,50 @@ function generarResumen(){
 
   tbl.appendChild(tbody);tw.appendChild(tbl);
 
+  // ── Cálculos finales: honorarios y modo resolución ──
+  const honPct=(state.honPct||30)/100;
+  const honIVA=state.honIVA||'asume';
+  let rcHTML='';
+
+  if(state.resolucion){
+    // MODO RESOLUCIÓN DE PAGO
+    const pension=gBaseResolucion*0.12;
+    const salud=gBaseResolucion*0.085;
+    const totalAportes=gX+pension+salud;
+    const honVal=totalAportes*honPct;
+    const honIvaVal=honIVA==='noasume'?honVal*0.19:0;
+    const valorFinal=totalAportes-honVal-honIvaVal;
+    rcHTML=
+      '<div class="rc az"><div class="rl">NETO Indexado</div><div class="rv">$'+fmt(gX)+'</div></div>'+
+      '<div class="rc g2"><div class="rl">Pensión Empleador 12%</div><div class="rv">$'+fmt(pension)+'</div><div class="rs">Base: $'+fmt(gBaseResolucion)+'</div></div>'+
+      '<div class="rc g2"><div class="rl">Salud Empleador 8.5%</div><div class="rv">$'+fmt(salud)+'</div></div>'+
+      '<div class="rc vd"><div class="rl">TOTAL CON APORTES</div><div class="rv">$'+fmt(totalAportes)+'</div></div>'+
+      '<div class="rc or"><div class="rl">Honorarios '+(honPct*100).toFixed(0)+'%</div><div class="rv">$'+fmt(honVal)+'</div>'+(honIVA==='noasume'?'<div class="rs">IVA 19%: $'+fmt(honIvaVal)+'</div>':'')+'</div>'+
+      '<div class="rc az"><div class="rl">VALOR FINAL CLIENTE</div><div class="rv">$'+fmt(valorFinal)+'</div></div>';
+    _guardarHistorial({gB,gN,gX,pension,salud,totalAportes,honVal,honIvaVal,valorFinal,modo:'resolucion'});
+  } else {
+    // MODO NORMAL (cesión/compra)
+    const pctDesc=(parseFloat(document.getElementById('int-descuento')?.value)||15.5)/100;
+    const descVal=gX*pctDesc;
+    const valorCompra=gX-descVal;
+    const honVal=valorCompra*honPct;
+    const honIvaVal=honIVA==='noasume'?honVal*0.19:0;
+    const valorFinal=valorCompra-honVal-honIvaVal;
+    rcHTML=
+      '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
+      '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
+      '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
+      '<div class="rc or"><div class="rl">NETO INDEXADO</div><div class="rv">$'+fmt(gX)+'</div><div class="rs">Dif. indexación: $'+fmt(dif)+'</div></div>'+
+      '<div class="rc g2"><div class="rl">Descuento '+(pctDesc*100).toFixed(1)+'%</div><div class="rv">$'+fmt(descVal)+'</div></div>'+
+      '<div class="rc vd"><div class="rl">VALOR COMPRA NETO</div><div class="rv">$'+fmt(valorCompra)+'</div></div>'+
+      '<div class="rc or"><div class="rl">Honorarios '+(honPct*100).toFixed(0)+'%</div><div class="rv">$'+fmt(honVal)+'</div>'+(honIVA==='noasume'?'<div class="rs">IVA 19%: $'+fmt(honIvaVal)+'</div>':'')+'</div>'+
+      '<div class="rc az"><div class="rl">VALOR FINAL CLIENTE</div><div class="rv">$'+fmt(valorFinal)+'</div></div>';
+    _guardarHistorial({gB,gN,gX,descVal,valorCompra,honVal,honIvaVal,valorFinal,modo:'normal'});
+  }
+
   const rc=document.createElement('div');rc.className='rcards';
-  rc.innerHTML='<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
-    '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
-    '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
-    '<div class="rc or"><div class="rl">NETO INDEXADO</div><div class="rv">$'+fmt(gX)+'</div>'+
-    '<div class="rs">Diferencia: $'+fmt(dif)+'</div></div>';
+  rc.innerHTML=rcHTML;
   cont.insertBefore(rc,cont.firstChild);
-  _guardarHistorial({gB,gN,gX});
 }
 
 
@@ -1458,7 +1527,7 @@ function _marcarCambio(){
 }
 async function _guardarHistorial(totales){
   const ahora=new Date();
-  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',años:state.años,lxm:state.lxm,mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false});
+  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',años:state.años,lxm:state.lxm,mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false,honPct:state.honPct||30,honIVA:state.honIVA||'asume'});
   const entrada={
     id:Date.now(),
     fecha:ahora.toLocaleDateString('es-CO')+' '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
@@ -1589,7 +1658,7 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
       clienteEjecutoria:s.clienteEjecutoria||'', clienteTurno:s.clienteTurno||'',
       años:s.años||[], lxm:s.lxm||{},
       mesEjec:s.mesEjec||'Mayo', añoEjec:s.añoEjec||2025,
-      diasVac:s.diasVac||22, gastosRep:s.gastosRep||false, gastosPct:s.gastosPct||33.33, resolucion:s.resolucion||false
+      diasVac:s.diasVac||22, gastosRep:s.gastosRep||false, gastosPct:s.gastosPct||33.33, resolucion:s.resolucion||false,honPct:s.honPct||30,honIVA:s.honIVA||'asume'
     });
     // Restaurar UI
     const n=document.getElementById('cli-nip');if(n)n.value=state.clienteNIP;
@@ -1600,6 +1669,9 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
     const nt=document.getElementById('cli-turno');if(nt)nt.value=state.clienteTurno||'';
     const dv=document.getElementById('g-diasVac');if(dv)dv.value=state.diasVac;
     const gr=document.getElementById('g-gastosRep');if(gr){gr.checked=state.gastosRep;onGastosChange();}
+    const honPctEl=document.getElementById('hon-pct');if(honPctEl)honPctEl.value=state.honPct||30;
+    const honIVAEl=document.getElementById(state.honIVA==='noasume'?'hon-noasume':'hon-asume');if(honIVAEl)honIVAEl.checked=true;
+    const rEl=document.getElementById('g-resolucion');if(rEl){rEl.checked=state.resolucion||false;onResolucionChange();}
     // Marcar años
     document.querySelectorAll('[id^="año-btn-"]').forEach(b=>{b.classList.remove('btn-p');b.classList.add('btn-o');});
     state.años.forEach(a=>{const b=document.getElementById('año-btn-'+a);if(b){b.classList.remove('btn-o');b.classList.add('btn-p');}});
@@ -2193,6 +2265,50 @@ function _generarExcel(){
       ...Array(COLS.length+3).fill('')
     ]);
   }
+
+  // Cálculos finales para Excel
+  const honPctXls=(state.honPct||30)/100;
+  const honIVAxls=state.honIVA||'asume';
+  const pctDescXls=(parseFloat(document.getElementById('int-descuento')?.value)||15.5)/100;
+
+  let resumenXls=[];
+  if(state.resolucion){
+    const pension2=gBaseResolucion*0.12;
+    const salud2=gBaseResolucion*0.085;
+    const totalAp2=gX+pension2+salud2;
+    const honV2=totalAp2*honPctXls;
+    const honIvaV2=honIVAxls==='noasume'?honV2*0.19:0;
+    const vFinal2=totalAp2-honV2-honIvaV2;
+    resumenXls=[
+      ['NETO Indexado', Math.round(gX)],
+      ['Pensión Empleador 12% (base bonif.: $'+fmt(gBaseResolucion)+')', Math.round(pension2)],
+      ['Salud Empleador 8.5%', Math.round(salud2)],
+      ['TOTAL CON APORTES', Math.round(totalAp2)],
+      ['Honorarios '+(honPctXls*100).toFixed(0)+'%', Math.round(honV2)],
+      ...(honIVAxls==='noasume'?[['IVA 19% sobre honorarios', Math.round(honIvaV2)]]:[] ),
+      ['VALOR FINAL CLIENTE', Math.round(vFinal2)],
+    ];
+  } else {
+    const descV2=gX*pctDescXls;
+    const vCompra2=gX-descV2;
+    const honV2=vCompra2*honPctXls;
+    const honIvaV2=honIVAxls==='noasume'?honV2*0.19:0;
+    const vFinal2=vCompra2-honV2-honIvaV2;
+    resumenXls=[
+      ['NETO Indexado', Math.round(gX)],
+      ['Diferencia por Indexación', Math.round(gX-gN)],
+      ['Descuento '+(pctDescXls*100).toFixed(1)+'%', Math.round(descV2)],
+      ['VALOR COMPRA NETO', Math.round(vCompra2)],
+      ['Honorarios '+(honPctXls*100).toFixed(0)+'%', Math.round(honV2)],
+      ...(honIVAxls==='noasume'?[['IVA 19% sobre honorarios', Math.round(honIvaV2)]]:[] ),
+      ['VALOR FINAL CLIENTE', Math.round(vFinal2)],
+    ];
+  }
+
+  // Añadir RESUMEN al final de ws1data
+  ws1data.push([]);
+  ws1data.push(['','','','RESUMEN','']);
+  resumenXls.forEach(([lbl,val])=> ws1data.push(['','','',lbl,val]));
 
   const ws1 = XLSX.utils.aoa_to_sheet(ws1data);
 
