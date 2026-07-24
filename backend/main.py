@@ -233,6 +233,15 @@ else:
         return {"error": "frontend no encontrado", "cwd": CWD,
                 "dirs": {p: os.listdir(p) for p in [CWD, BASE_DIR] if os.path.exists(p)}}
 
+
+@app.get("/api/supa-config")
+def supa_config():
+    """Expone las credenciales de Supabase al frontend de forma segura.
+    Solo expone la anon key (pública por diseño en Supabase)."""
+    url = os.getenv("SUPABASE_URL","")
+    key = os.getenv("SUPABASE_KEY","")
+    return {"url": url, "key": key}
+
 @app.post("/api/exportar-excel")
 async def exportar_excel(request: Request):
     try:
