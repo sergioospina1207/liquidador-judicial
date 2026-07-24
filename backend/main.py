@@ -2,6 +2,8 @@
 Liquidador de Bonificación Judicial — Backend API
 """
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
+import io
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -230,6 +232,28 @@ else:
     def root():
         return {"error": "frontend no encontrado", "cwd": CWD,
                 "dirs": {p: os.listdir(p) for p in [CWD, BASE_DIR] if os.path.exists(p)}}
+
+@app.post("/api/exportar-excel")
+async def exportar_excel(request: Request):
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from excel_gen import generar_excel
+        data = await request.json()
+        xlsx_bytes = generar_excel(data)
+        nombre = data.get('cliente',{}).get('nombre','liquidacion').replace(' ','_')
+        nip    = data.get('cliente',{}).get('nip','')
+        fname  = f"Liquidacion{'_'+nip if nip else ''}_{nombre}.xlsx"
+        return StreamingResponse(
+            io.BytesIO(xlsx_bytes),
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={'Content-Disposition': f'attachment; filename="{fname}"'}
+        )
+    except Exception as e:
+        logger.error(f"Error generando Excel: {e}")
+        import traceback; traceback.print_exc()
+        raise HTTPException(500, str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
