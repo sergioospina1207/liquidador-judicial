@@ -111,6 +111,45 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
 </head>
 <body>
 
+<!-- ═══ PANTALLA DE LOGIN ═══ -->
+<div id="login-screen" style="display:flex;align-items:center;justify-content:center;
+  min-height:100vh;background:linear-gradient(135deg,#1F3864 0%,#2563A8 100%);
+  position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999">
+  <div style="background:#fff;border-radius:16px;padding:40px 36px;width:100%;max-width:400px;
+    box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:48px;margin-bottom:8px">⚖️</div>
+      <h2 style="color:#1F3864;margin:0;font-size:20px">Liquidador Judicial</h2>
+      <p style="color:#666;font-size:13px;margin:6px 0 0">Ingrese sus credenciales para continuar</p>
+    </div>
+    <div id="login-error" style="display:none;background:#fdecea;color:#c62828;
+      padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center"></div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px">Correo electrónico</label>
+      <input type="email" id="login-email" placeholder="usuario@correo.com"
+        style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;
+        font-size:14px;box-sizing:border-box;outline:none"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px">Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••"
+        style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;
+        font-size:14px;box-sizing:border-box;outline:none"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button onclick="doLogin()" id="login-btn"
+      style="width:100%;padding:12px;background:#1F3864;color:#fff;border:none;
+      border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">
+      Ingresar
+    </button>
+    <p style="text-align:center;font-size:11px;color:#999;margin-top:16px;margin-bottom:0">
+      Para solicitar acceso contacte al administrador
+    </p>
+  </div>
+</div>
+
+
 <div class="hd">
   <div style="font-size:26px">⚖️</div>
   <div>
@@ -2364,10 +2403,95 @@ async function _sincronizarCargosAPI(){
   }catch(e){ console.warn('No se pudieron sincronizar cargos:', e); }
 }
 
+
+// ══════════════════════════════════════════════════════════
+// AUTENTICACIÓN CON SUPABASE AUTH
+// ══════════════════════════════════════════════════════════
+let _supaClient=null;
+
+async function _getSupaClient(){
+  if(_supaClient) return _supaClient;
+  try{
+    const res=await fetch('/api/supa-config');
+    if(!res.ok) return null;
+    const cfg=await res.json();
+    if(!cfg.url||!cfg.key) return null;
+    if(typeof supabase==='undefined'){
+      await new Promise((resolve,reject)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+        s.onload=resolve; s.onerror=reject;
+        document.head.appendChild(s);
+      });
+    }
+    _supaClient=supabase.createClient(cfg.url,cfg.key);
+    return _supaClient;
+  }catch(e){ console.warn('Auth no disponible:',e); return null; }
+}
+
+async function checkSession(){
+  const screen=document.getElementById('login-screen');
+  const btnOut=document.getElementById('btn-logout');
+  try{
+    const client=await _getSupaClient();
+    if(!client){
+      // Modo local sin servidor — acceso libre
+      if(screen) screen.style.display='none';
+      return;
+    }
+    const {data:{session}}=await client.auth.getSession();
+    if(session){
+      if(screen) screen.style.display='none';
+      if(btnOut) btnOut.style.display='block';
+    }
+  }catch(e){
+    if(screen) screen.style.display='none';
+  }
+}
+
+async function doLogin(){
+  const email=(document.getElementById('login-email')?.value||'').trim();
+  const pass=document.getElementById('login-pass')?.value||'';
+  const errEl=document.getElementById('login-error');
+  const btn=document.getElementById('login-btn');
+  if(!email||!pass){ if(errEl){errEl.textContent='Ingrese correo y contraseña';errEl.style.display='block';} return; }
+  if(btn){ btn.textContent='Ingresando...'; btn.disabled=true; }
+  if(errEl) errEl.style.display='none';
+  try{
+    const client=await _getSupaClient();
+    if(!client) throw new Error('Sin conexión al servidor');
+    const {data,error}=await client.auth.signInWithPassword({email,password:pass});
+    if(error) throw error;
+    const screen=document.getElementById('login-screen');
+    const btnOut=document.getElementById('btn-logout');
+    if(screen) screen.style.display='none';
+    if(btnOut) btnOut.style.display='block';
+  }catch(e){
+    if(errEl){
+      errEl.textContent=e.message==='Invalid login credentials'?'Correo o contraseña incorrectos':'Error: '+e.message;
+      errEl.style.display='block';
+    }
+  }finally{
+    if(btn){ btn.textContent='Ingresar'; btn.disabled=false; }
+  }
+}
+
+async function doLogout(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  try{ const c=await _getSupaClient(); if(c) await c.auth.signOut(); }catch(e){}
+  const screen=document.getElementById('login-screen');
+  const btnOut=document.getElementById('btn-logout');
+  if(screen) screen.style.display='flex';
+  if(btnOut) btnOut.style.display='none';
+  const el=document.getElementById('login-email'); if(el) el.value='';
+  const pl=document.getElementById('login-pass'); if(pl) pl.value='';
+}
+
 init();
 _cargarCargosLocal();
 _sincronizarCargosAPI();
 renderHistorial();
+checkSession();
 initExtras();
 restaurarSesionLocal();
 </script>
