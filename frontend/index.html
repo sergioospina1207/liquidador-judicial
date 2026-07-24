@@ -1427,50 +1427,19 @@ function generarResumen(){
 
   tbl.appendChild(tbody);tw.appendChild(tbl);
 
-  // ── Cálculos finales: honorarios y modo resolución ──
-  const honPct=(state.honPct||30)/100;
-  const honIVA=state.honIVA||'asume';
-  let rcHTML='';
-
-  if(state.resolucion){
-    // MODO RESOLUCIÓN DE PAGO
-    const pension=gBaseResolucion*0.12;
-    const salud=gBaseResolucion*0.085;
-    const totalAportes=gX+pension+salud;
-    const honVal=totalAportes*honPct;
-    const honIvaVal=honIVA==='noasume'?honVal*0.19:0;
-    const valorFinal=totalAportes-honVal-honIvaVal;
-    rcHTML=
-      '<div class="rc az"><div class="rl">NETO Indexado</div><div class="rv">$'+fmt(gX)+'</div></div>'+
-      '<div class="rc g2"><div class="rl">Pensión Empleador 12%</div><div class="rv">$'+fmt(pension)+'</div><div class="rs">Base: $'+fmt(gBaseResolucion)+'</div></div>'+
-      '<div class="rc g2"><div class="rl">Salud Empleador 8.5%</div><div class="rv">$'+fmt(salud)+'</div></div>'+
-      '<div class="rc vd"><div class="rl">TOTAL CON APORTES</div><div class="rv">$'+fmt(totalAportes)+'</div></div>'+
-      '<div class="rc or"><div class="rl">Honorarios '+(honPct*100).toFixed(0)+'%</div><div class="rv">$'+fmt(honVal)+'</div>'+(honIVA==='noasume'?'<div class="rs">IVA 19%: $'+fmt(honIvaVal)+'</div>':'')+'</div>'+
-      '<div class="rc az"><div class="rl">VALOR FINAL CLIENTE</div><div class="rv">$'+fmt(valorFinal)+'</div></div>';
-    _guardarHistorial({gB,gN,gX,pension,salud,totalAportes,honVal,honIvaVal,valorFinal,modo:'resolucion'});
-  } else {
-    // MODO NORMAL (cesión/compra)
-    const pctDesc=(parseFloat(document.getElementById('int-descuento')?.value)||15.5)/100;
-    const descVal=gX*pctDesc;
-    const valorCompra=gX-descVal;
-    const honVal=valorCompra*honPct;
-    const honIvaVal=honIVA==='noasume'?honVal*0.19:0;
-    const valorFinal=valorCompra-honVal-honIvaVal;
-    rcHTML=
-      '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
-      '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
-      '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
-      '<div class="rc or"><div class="rl">NETO INDEXADO</div><div class="rv">$'+fmt(gX)+'</div><div class="rs">Dif. indexación: $'+fmt(dif)+'</div></div>'+
-      '<div class="rc g2"><div class="rl">Descuento '+(pctDesc*100).toFixed(1)+'%</div><div class="rv">$'+fmt(descVal)+'</div></div>'+
-      '<div class="rc vd"><div class="rl">VALOR COMPRA NETO</div><div class="rv">$'+fmt(valorCompra)+'</div></div>'+
-      '<div class="rc or"><div class="rl">Honorarios '+(honPct*100).toFixed(0)+'%</div><div class="rv">$'+fmt(honVal)+'</div>'+(honIVA==='noasume'?'<div class="rs">IVA 19%: $'+fmt(honIvaVal)+'</div>':'')+'</div>'+
-      '<div class="rc az"><div class="rl">VALOR FINAL CLIENTE</div><div class="rv">$'+fmt(valorFinal)+'</div></div>';
-    _guardarHistorial({gB,gN,gX,descVal,valorCompra,honVal,honIvaVal,valorFinal,modo:'normal'});
-  }
-
+  // Cards resumen — solo bruto, deducciones, neto, indexado
   const rc=document.createElement('div');rc.className='rcards';
-  rc.innerHTML=rcHTML;
+  rc.innerHTML=
+    '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
+    '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
+    '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
+    '<div class="rc or"><div class="rl">NETO INDEXADO</div><div class="rv">$'+fmt(gX)+'</div>'+
+    '<div class="rs">Diferencia indexación: $'+fmt(dif)+'</div></div>';
   cont.insertBefore(rc,cont.firstChild);
+  // Guardar neto indexado en state para usarlo en intereses
+  state.netoIndexado=gX;
+  state._gBaseResolucion=gBaseResolucion;
+  _guardarHistorial({gB,gN,gX,modo:state.resolucion?'resolucion':'normal'});
 }
 
 
@@ -1959,22 +1928,58 @@ function _renderIntereses(capital,fechaIni,fechaRad,fechaFin,fechaLimRad,finDTF,
   trTot.innerHTML='<td colspan="3">TOTAL</td><td class="r mono">'+diasTot+'</td><td colspan="3"></td><td class="r mono">$'+fmt(totalInt)+'</td><td></td>';
   tbody.appendChild(trTot);
   const radStr=radTarde?'<span class="badge b-rj">SÍ — suspendido del '+fmtDate(fechaLimRad)+' al '+fmtDate(fechaRad)+'</span>':'<span class="badge b-vd">No</span>';
+
+  // Cálculos finales
+  const honPct2=(state.honPct||30)/100;
+  const honIVA2=state.honIVA||'asume';
+  const pctDesc2=(parseFloat(document.getElementById('int-descuento')?.value)||15.5)/100;
+  const netoIdx2=state.netoIndexado||0;
+  let tablaHTML='';
+
+  if(state.resolucion){
+    const baseRes2=state._gBaseResolucion||0;
+    const pension2=baseRes2*0.12, salud2=baseRes2*0.085;
+    const totalAp2=netoIdx2+pension2+salud2;
+    const totalFin2=totalAp2+totalInt;
+    const honV2=totalFin2*honPct2;
+    const honIvaV2=honIVA2==='noasume'?honV2*0.19:0;
+    const vFinal2=totalFin2-honV2-honIvaV2;
+    tablaHTML=
+      '<tr style="background:var(--g1)"><td style="padding:7px 10px">NETO Indexado (prestaciones)</td><td class="r mono" style="padding:7px 10px">$'+fmt(netoIdx2)+'</td></tr>'+
+      '<tr><td style="padding:7px 10px">Pensión Empleador 12% (base bonif. $'+fmt(baseRes2)+')</td><td class="r mono" style="padding:7px 10px">$'+fmt(pension2)+'</td></tr>'+
+      '<tr style="background:var(--g1)"><td style="padding:7px 10px">Salud Empleador 8.5%</td><td class="r mono" style="padding:7px 10px">$'+fmt(salud2)+'</td></tr>'+
+      '<tr style="background:var(--az2)"><td style="padding:7px 10px;font-weight:700">Total con Aportes</td><td class="r mono" style="padding:7px 10px;font-weight:700">$'+fmt(totalAp2)+'</td></tr>'+
+      '<tr><td style="padding:7px 10px">Intereses moratorios</td><td class="r mono" style="padding:7px 10px">$'+fmt(totalInt)+'</td></tr>'+
+      '<tr style="background:var(--az);color:#fff"><td style="padding:7px 10px;font-weight:700">TOTAL A PAGAR</td><td class="r mono" style="padding:7px 10px;font-weight:700">$'+fmt(totalFin2)+'</td></tr>'+
+      '<tr style="background:var(--or2)"><td style="padding:7px 10px;color:var(--or);font-weight:600">Honorarios '+Math.round(honPct2*100)+'%'+(honIVA2==='noasume'?' + IVA 19%':' (IVA incluido)')+'</td><td class="r mono" style="padding:7px 10px;color:var(--or);font-weight:600">$'+fmt(honV2+honIvaV2)+'</td></tr>'+
+      '<tr style="background:var(--vd);color:#fff"><td style="padding:7px 10px;font-weight:700">VALOR FINAL CLIENTE</td><td class="r mono" style="padding:7px 10px;font-weight:700">$'+fmt(vFinal2)+'</td></tr>';
+  } else {
+    const totalBase2=netoIdx2+totalInt;
+    const descV2=totalBase2*pctDesc2;
+    const vCompra2=totalBase2-descV2;
+    const honV2=vCompra2*honPct2;
+    const honIvaV2=honIVA2==='noasume'?honV2*0.19:0;
+    const vFinal2=vCompra2-honV2-honIvaV2;
+    tablaHTML=
+      '<tr style="background:var(--g1)"><td style="padding:7px 10px">NETO Indexado (prestaciones)</td><td class="r mono" style="padding:7px 10px">$'+fmt(netoIdx2)+'</td></tr>'+
+      '<tr><td style="padding:7px 10px">Intereses moratorios</td><td class="r mono" style="padding:7px 10px">$'+fmt(totalInt)+'</td></tr>'+
+      '<tr style="background:var(--az);color:#fff"><td style="padding:7px 10px;font-weight:700">TOTAL A PAGAR</td><td class="r mono" style="padding:7px 10px;font-weight:700">$'+fmt(totalBase2)+'</td></tr>'+
+      '<tr style="background:var(--or2)"><td style="padding:7px 10px;color:var(--or);font-weight:600">Descuento '+parseFloat((pctDesc2*100).toFixed(1))+'%</td><td class="r mono" style="padding:7px 10px;color:var(--or)">$'+fmt(descV2)+'</td></tr>'+
+      '<tr style="background:var(--or)"><td style="padding:7px 10px;color:#fff;font-weight:700">VALOR COMPRA NETO</td><td class="r mono" style="padding:7px 10px;color:#fff;font-weight:700">$'+fmt(vCompra2)+'</td></tr>'+
+      '<tr style="background:var(--g1)"><td style="padding:7px 10px">Honorarios '+Math.round(honPct2*100)+'%'+(honIVA2==='noasume'?' + IVA 19%':' (IVA incluido)')+'</td><td class="r mono" style="padding:7px 10px">$'+fmt(honV2+honIvaV2)+'</td></tr>'+
+      '<tr style="background:var(--vd);color:#fff"><td style="padding:7px 10px;font-weight:700">VALOR FINAL CLIENTE</td><td class="r mono" style="padding:7px 10px;font-weight:700">$'+fmt(vFinal2)+'</td></tr>';
+  }
+
   document.getElementById('int-resumen-body').innerHTML=
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:14px">'
-    +'<div><strong>Ejecutoria:</strong> '+fmtDate(fechaIni)+'</div>'
-    +'<div><strong>Fin etapa DTF (mes '+mesesDTF+'):</strong> '+fmtDate(finDTF)+'</div>'
-    +'<div><strong>Límite radicación:</strong> '+fmtDate(fechaLimRad)+'</div>'
-    +'<div><strong>Fecha radicación:</strong> '+fmtDate(fechaRad)+'</div>'
-    +'<div><strong>Fecha corte:</strong> '+fmtDate(fechaFin)+'</div>'
-    +'<div><strong>¿Radicó tarde?</strong> '+radStr+'</div>'
-    +'<div><strong>Factor usura:</strong> '+factorUsura+'×</div></div>'
-    +'<table style="width:100%;border-collapse:collapse;font-size:13px">'
-    +'<tr style="background:var(--g2)"><td style="padding:8px;font-weight:600">Capital nominal</td><td class="r mono" style="padding:8px">$'+fmt(capital)+'</td></tr>'
-    +'<tr><td style="padding:8px;font-weight:600">Intereses moratorios</td><td class="r mono" style="padding:8px">$'+fmt(totalInt)+'</td></tr>'
-    +'<tr style="background:var(--az);color:#fff"><td style="padding:8px;font-weight:700">TOTAL A PAGAR</td><td class="r mono" style="padding:8px;font-weight:700">$'+fmt(total)+'</td></tr>'
-    +'<tr style="background:var(--or2)"><td style="padding:8px;color:var(--or);font-weight:600">Descuento '+(pctDesc*100).toFixed(1)+'%</td><td class="r mono" style="padding:8px;color:var(--or)">$'+fmt(p155)+'</td></tr>'
-    +'<tr style="background:var(--or)"><td style="padding:8px;color:#fff;font-weight:700">Valor compra (neto)</td><td class="r mono" style="padding:8px;color:#fff;font-weight:700">$'+fmt(compra)+'</td></tr>'
-    +'</table>';
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:14px;font-size:12px">'+
+    '<div><strong>Ejecutoria:</strong> '+fmtDate(fechaIni)+'</div>'+
+    '<div><strong>Fin DTF (mes '+mesesDTF+'):</strong> '+fmtDate(finDTF)+'</div>'+
+    '<div><strong>Límite radicación:</strong> '+fmtDate(fechaLimRad)+'</div>'+
+    '<div><strong>Fecha radicación:</strong> '+fmtDate(fechaRad)+'</div>'+
+    '<div><strong>Fecha corte:</strong> '+fmtDate(fechaFin)+'</div>'+
+    '<div><strong>¿Radicó tarde?</strong> '+radStr+'</div>'+
+    '<div><strong>Factor usura:</strong> '+factorUsura+'×</div></div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px">'+tablaHTML+'</table>';
 }
 
 function exportarInteresesCSV(){
@@ -2143,63 +2148,29 @@ function exportarExcel(){
 }
 
 function _generarExcel(){
-  const wb = XLSX.utils.book_new();
+  // Preparar datos para enviar al backend que genera el Excel con formato
   const mc=MESES_C[MESES.indexOf(state.mesEjec)];
   const ipcEj=APPD.ipc[state.añoEjec]?.[mc]||0;
 
   const COLS=[
-    {key:'prodS1',     label:'Bonif.\nProd S1',   ibc:true},
-    {key:'prodS2',     label:'Bonif.\nProd S2',   ibc:true},
-    {key:'servicios',  label:'Bonif.\nServicios', ibc:true},
-    {key:'primaServ',  label:'Prima\nServicios'},
-    {key:'primaVac',   label:'Prima\nVacaciones'},
-    {key:'sueldoVac10',label:'Sueldo\nVac.(1/10)'},
-    {key:'primaNov',   label:'Prima\nNavidad'},
+    {key:'prodS1',     label:'Bonif. Prod S1',   ibc:true},
+    {key:'prodS2',     label:'Bonif. Prod S2',   ibc:true},
+    {key:'servicios',  label:'Bonif. Servicios', ibc:true},
+    {key:'primaServ',  label:'Prima Servicios'},
+    {key:'primaVac',   label:'Prima Vacaciones'},
+    {key:'sueldoVac10',label:'Sueldo Vac.(1/10)'},
+    {key:'primaNov',   label:'Prima Navidad'},
     {key:'cesantias',  label:'Cesantías'},
-    {key:'intereses',  label:'Intereses\nCes.'},
+    {key:'intereses',  label:'Intereses Ces.'},
   ];
 
-  // ══════════════════════════════════════════════
-  // HOJA 1: RESUMEN LIQUIDACIÓN
-  // ══════════════════════════════════════════════
-  const ws1data = [];
-  const ws1styles = {}; // guardamos estilos por celda
-
-  const añosStr = Object.keys(state.ps).sort().join(' - ');
-  const fmtFecha = v => v ? v.split('-').reverse().join('/') : '—';
-
-  // Fila 1: Título
-  ws1data.push(['LIQUIDACIÓN DE PRESTACIONES SOCIALES SOBRE BONIFICACIÓN JUDICIAL','','','','','','','','','','','','','','','','','','']);
-  // Fila 2: vacía
-  ws1data.push([]);
-  // Filas 3-6: Datos cliente (2 columnas lado a lado)
-  ws1data.push(['NIP:', state.clienteNIP||'—', '', '', 'Nombre:', state.clienteNombre||'—']);
-  ws1data.push(['Entidad:', state.clienteEntidad||'—', '', '', 'Cargo(s):', state.clienteCargo||'—']);
-  ws1data.push(['Período:', añosStr, '', '', 'Ejecutoria:', fmtFecha(state.clienteEjecutoria)]);
-  ws1data.push(['IPC Ejecutoria:', ipcEj+' ('+state.mesEjec+' '+state.añoEjec+')', '', '', 'Turno Pago:', fmtFecha(state.clienteTurno)]);
-  // Fila 7: vacía
-  ws1data.push([]);
-
-  // Fila 8: Encabezado columnas (fila 1 de encabezado - grupos)
-  const hdr1 = ['Período','Días',...COLS.map(()=>''),'BRUTO','IBC','Deduc. 9%','NETO','IPC\nInicial','Factor','NETO\nINDEXADO'];
-  hdr1[2] = 'PRESTACIONES SOCIALES'; // grupo central
-  ws1data.push(hdr1);
-
-  // Fila 9: Encabezado columnas (nombres individuales)
-  ws1data.push(['','', ...COLS.map(c=>c.label), '', '', '', '', '', '', '']);
-
-  const HDR_ROW1 = ws1data.length - 1; // índice fila encabezado grupo (0-based)
-  const HDR_ROW2 = ws1data.length;     // índice fila encabezado individual
-
+  // Construir filas de datos
+  const filas=[];
   let gB=0,gIBC=0,gD=0,gN=0,gX=0,gBaseRes=0;
   const cT={};COLS.forEach(c=>{cT[c.key]=0;});
-  const yearStartRows = []; // para marcar filas separadoras de año
 
   Object.keys(state.ps).sort((a,b)=>Number(a)-Number(b)).forEach(año=>{
-    const yrRow = ws1data.length;
-    yearStartRows.push(yrRow);
-    ws1data.push(['── AÑO '+año+' ──']);
-
+    filas.push({tipo:'sep', label:'AÑO '+año});
     MESES.forEach(mes=>{
       const dMes=(state.lxm[año]?.[mes]||[]).reduce((s,f)=>s+f.dias,0);
       const vC={};let bruto=0,ibc=0;
@@ -2210,192 +2181,135 @@ function _generarExcel(){
           vC[col.key]=v.b; bruto+=v.b; if(col.ibc)ibc+=v.b;
         } else vC[col.key]=0;
       });
-
-      // Solo filas con valores
-      if(bruto===0 && dMes===0) return;
-
+      if(bruto===0&&dMes===0) return;
       const ded=ibc*0.09, neto=bruto-ded;
       const mc2=MESES_C[MESES.indexOf(mes)];
       const ipcI=APPD.ipc[parseInt(año)]?.[mc2]||0;
-      const mesIdxX=MESES.indexOf(mes);const ejecIdxX=MESES.indexOf(state.mesEjec);
-      const esPosteriorX=(parseInt(año)>state.añoEjec)||(parseInt(año)===state.añoEjec&&mesIdxX>=ejecIdxX);
-      const factor=esPosteriorX?1:((ipcI&&ipcEj)?ipcEj/ipcI:1);
+      const mesIdx=MESES.indexOf(mes),ejecIdx=MESES.indexOf(state.mesEjec);
+      const esPosterior=(parseInt(año)>state.añoEjec)||(parseInt(año)===state.añoEjec&&mesIdx>=ejecIdx);
+      const factor=esPosterior?1:((ipcI&&ipcEj)?ipcEj/ipcI:1);
       const nIdx=neto*factor;
-
       gB+=bruto;gIBC+=ibc;gD+=ded;gN+=neto;gX+=nIdx;
       gBaseRes+=(vC['prodS1']||0)+(vC['prodS2']||0)+(vC['servicios']||0);
       COLS.forEach(c=>{cT[c.key]+=(vC[c.key]||0);});
-
-      ws1data.push([
-        mes+' '+año, dMes,
-        ...COLS.map(c=>Math.round(vC[c.key]||0)||''),
-        Math.round(bruto), Math.round(ibc), Math.round(ded),
-        Math.round(neto), ipcI||'', parseFloat(factor.toFixed(4)),
-        Math.round(nIdx)
-      ]);
+      filas.push({tipo:'data',periodo:mes+' '+año,dias:dMes,
+        cols:COLS.map(c=>Math.round(vC[c.key]||0)),
+        bruto:Math.round(bruto),ibc:Math.round(ibc),ded:Math.round(ded),
+        neto:Math.round(neto),ipcIni:ipcI,factor:parseFloat(factor.toFixed(4)),
+        nIdx:Math.round(nIdx)});
     });
   });
 
-  // Fila TOTALES
-  const totRow = ws1data.length;
-  ws1data.push([
-    'TOTALES', '',
-    ...COLS.map(c=>Math.round(cT[c.key])||''),
-    Math.round(gB), Math.round(gIBC), Math.round(gD),
-    Math.round(gN), '', '', Math.round(gX)
-  ]);
+  // Totales
+  const totales={cols:COLS.map(c=>Math.round(cT[c.key]||0)),
+    bruto:Math.round(gB),ibc:Math.round(gIBC),ded:Math.round(gD),
+    neto:Math.round(gN),nIdx:Math.round(gX)};
 
-  // Fila DIFERENCIA
-  const difRow = ws1data.length;
-  const dif = gX - gN;
-  ws1data.push([
-    'DIFERENCIA POR INDEXACIÓN (Indexado — Neto):',
-    ...Array(COLS.length+7).fill(''),
-    Math.round(dif)
-  ]);
+  // Cálculos resumen para Excel
+  const honPct=(state.honPct||30)/100;
+  const honIVA=state.honIVA||'asume';
+  const pctDesc=(parseFloat(document.getElementById('int-descuento')?.value)||15.5)/100;
+  const netoIdxE=state.netoIndexado||gX;
+  const totalInteresesE=intTramos.reduce((s,t)=>s+t.interes,0);
 
-  // Aportes resolución
-  if(state.resolucion && gBaseRes>0){
-    const pension=gBaseRes*0.12, salud=gBaseRes*0.085;
-    ws1data.push([
-      'APORTES EMPLEADOR — Base: $'+fmt(gBaseRes),
-      '', 'Pensión 12%:', Math.round(pension),
-      'Salud 8.5%:', Math.round(salud),
-      'TOTAL:', Math.round(pension+salud),
-      ...Array(COLS.length+3).fill('')
-    ]);
-  }
-
-  // Cálculos finales para Excel
-  const honPctXls=(state.honPct||30)/100;
-  const honIVAxls=state.honIVA||'asume';
-  const pctDescXls=(parseFloat(document.getElementById('int-descuento')?.value)||15.5)/100;
-
-  let resumenXls=[];
+  let resumen={};
   if(state.resolucion){
-    const pension2=gBaseResolucion*0.12;
-    const salud2=gBaseResolucion*0.085;
-    const totalAp2=gX+pension2+salud2;
-    const honV2=totalAp2*honPctXls;
-    const honIvaV2=honIVAxls==='noasume'?honV2*0.19:0;
-    const vFinal2=totalAp2-honV2-honIvaV2;
-    resumenXls=[
-      ['NETO Indexado', Math.round(gX)],
-      ['Pensión Empleador 12% (base bonif.: $'+fmt(gBaseResolucion)+')', Math.round(pension2)],
-      ['Salud Empleador 8.5%', Math.round(salud2)],
-      ['TOTAL CON APORTES', Math.round(totalAp2)],
-      ['Honorarios '+(honPctXls*100).toFixed(0)+'%', Math.round(honV2)],
-      ...(honIVAxls==='noasume'?[['IVA 19% sobre honorarios', Math.round(honIvaV2)]]:[] ),
-      ['VALOR FINAL CLIENTE', Math.round(vFinal2)],
-    ];
+    const baseResE=state._gBaseResolucion||gBaseResolucion||0;
+    const pensionE=baseResE*0.12, saludE=baseResE*0.085;
+    const totalApE=netoIdxE+pensionE+saludE;
+    const totalFinE=totalApE+totalInteresesE;
+    const honVE=totalFinE*honPct;
+    const honIvaVE=honIVA==='noasume'?honVE*0.19:0;
+    resumen={modo:'resolucion',
+      netoIdx:Math.round(netoIdxE),baseRes:Math.round(baseResE),
+      pension:Math.round(pensionE),salud:Math.round(saludE),
+      totalAportes:Math.round(totalApE),
+      intereses:Math.round(totalInteresesE),
+      totalFin:Math.round(totalFinE),
+      honPct:Math.round(honPct*100),honV:Math.round(honVE),
+      honIVA,honIvaV:Math.round(honIvaVE),
+      valorFinal:Math.round(totalFinE-honVE-honIvaVE)};
   } else {
-    const descV2=gX*pctDescXls;
-    const vCompra2=gX-descV2;
-    const honV2=vCompra2*honPctXls;
-    const honIvaV2=honIVAxls==='noasume'?honV2*0.19:0;
-    const vFinal2=vCompra2-honV2-honIvaV2;
-    resumenXls=[
-      ['NETO Indexado', Math.round(gX)],
-      ['Diferencia por Indexación', Math.round(gX-gN)],
-      ['Descuento '+(pctDescXls*100).toFixed(1)+'%', Math.round(descV2)],
-      ['VALOR COMPRA NETO', Math.round(vCompra2)],
-      ['Honorarios '+(honPctXls*100).toFixed(0)+'%', Math.round(honV2)],
-      ...(honIVAxls==='noasume'?[['IVA 19% sobre honorarios', Math.round(honIvaV2)]]:[] ),
-      ['VALOR FINAL CLIENTE', Math.round(vFinal2)],
-    ];
+    const totalBaseE=netoIdxE+totalInteresesE;
+    const descVE=totalBaseE*pctDesc;
+    const vCompraE=totalBaseE-descVE;
+    const honVE=vCompraE*honPct;
+    const honIvaVE=honIVA==='noasume'?honVE*0.19:0;
+    resumen={modo:'normal',
+      netoIdx:Math.round(netoIdxE),
+      intereses:Math.round(totalInteresesE),
+      totalBase:Math.round(totalBaseE),
+      pctDesc:parseFloat((pctDesc*100).toFixed(1)),
+      descV:Math.round(descVE),valorCompra:Math.round(vCompraE),
+      honPct:Math.round(honPct*100),honV:Math.round(honVE),
+      honIVA,honIvaV:Math.round(honIvaVE),
+      valorFinal:Math.round(vCompraE-honVE-honIvaVE)};
   }
 
-  // Añadir RESUMEN al final de ws1data
-  ws1data.push([]);
-  ws1data.push(['','','','RESUMEN','']);
-  resumenXls.forEach(([lbl,val])=> ws1data.push(['','','',lbl,val]));
+  // Intereses
+  const tramosData=intTramos.map(t=>({
+    n:t.n, desde:t.desde?t.desde.toLocaleDateString('es-CO'):'-',
+    hasta:t.hasta?t.hasta.toLocaleDateString('es-CO'):'-',
+    dias:t.dias, etapa:t.etapa,
+    tasaEA:parseFloat(t.tasaEA.toFixed(2)),
+    tasaPer:parseFloat(t.tasaPeriodo.toFixed(4)),
+    interes:Math.round(t.interes),
+    estado:t.estado||(t.suspendido?'Suspendido':'Activo')
+  }));
 
-  const ws1 = XLSX.utils.aoa_to_sheet(ws1data);
+  const intParams={
+    capital:parseCapital(),
+    fechaIni:document.getElementById('int-fecha-ini')?.value||'',
+    fechaRad:document.getElementById('int-fecha-rad')?.value||'',
+    fechaFin:document.getElementById('int-fecha-fin')?.value||'',
+    mesesDTF:document.getElementById('int-meses-dtf')?.value||10,
+    factorUsura:document.getElementById('int-factor-usura')?.value||1.5,
+    descuento:parseFloat((pctDesc*100).toFixed(1)),
+    totalIntereses:Math.round(totalIntereses),
+  };
 
-  // Anchos de columna
-  ws1['!cols'] = [
-    {wch:18},{wch:5},
-    ...COLS.map(()=>({wch:11})),
-    {wch:13},{wch:10},{wch:9},{wch:13},{wch:7},{wch:7},{wch:14}
-  ];
+  const payload={
+    cliente:{
+      nip:state.clienteNIP||'', nombre:state.clienteNombre||'',
+      entidad:state.clienteEntidad||'', cargo:state.clienteCargo||'',
+      ejecutoria:state.clienteEjecutoria||'', turno:state.clienteTurno||'',
+      periodo:Object.keys(state.ps).sort().join(' - '),
+      ipc:ipcEj+' ('+state.mesEjec+' '+state.añoEjec+')'
+    },
+    colHeaders:COLS.map(c=>c.label),
+    filas, totales, resumen, tramosData, intParams
+  };
 
-  // Combinar celdas encabezado título
-  ws1['!merges'] = [
-    {s:{r:0,c:0},e:{r:0,c:18}},           // Título
-    {s:{r:7,c:2},e:{r:7,c:2+COLS.length-1}} // Grupo "PRESTACIONES SOCIALES"
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws1, 'Resumen Liquidación');
-
-  // ══════════════════════════════════════════════
-  // HOJA 2: INTERESES MORATORIOS
-  // ══════════════════════════════════════════════
-  const ws2data = [];
-
-  ws2data.push(['LIQUIDACIÓN DE INTERESES MORATORIOS']);
-  ws2data.push([]);
-  ws2data.push(['NIP:', state.clienteNIP||'—', '', '', 'Nombre:', state.clienteNombre||'—']);
-  ws2data.push([]);
-
-  if(intTramos.length){
-    const capital=parseCapital();
-    const totalInt=intTramos.reduce((s,t)=>s+t.interes,0);
-    const total=capital+totalInt;
-    const pctDesc=(parseFloat(document.getElementById('int-descuento')?.value)||15.5)/100;
-    const desc=total*pctDesc;
-
-    ws2data.push(['Capital nominal sentencia:', Math.round(capital)]);
-    ws2data.push(['Fecha inicio (ejecutoria):', fmtFecha(document.getElementById('int-fecha-ini')?.value||'')]);
-    ws2data.push(['Fecha radicación:', fmtFecha(document.getElementById('int-fecha-rad')?.value||'')]);
-    ws2data.push(['Fecha corte:', fmtFecha(document.getElementById('int-fecha-fin')?.value||'')]);
-    ws2data.push(['Meses tasa DTF:', parseInt(document.getElementById('int-meses-dtf')?.value)||10]);
-    ws2data.push(['Factor usura:', parseFloat(document.getElementById('int-factor-usura')?.value)||1.5]);
-    ws2data.push([]);
-
-    // Encabezado tabla
-    ws2data.push(['#','Desde','Hasta','Días','Etapa','Tasa EA %','Tasa Período %','Interés tramo','Estado']);
-    const intHdrRow = ws2data.length - 1;
-
-    intTramos.forEach(t=>{
-      ws2data.push([
-        t.n,
-        fmtFecha(t.desde?.toISOString?.()?.split('T')[0]||''),
-        fmtFecha(t.hasta?.toISOString?.()?.split('T')[0]||''),
-        t.dias,
-        t.etapa,
-        parseFloat(t.tasaEA.toFixed(2)),
-        parseFloat(t.tasaPeriodo.toFixed(4)),
-        Math.round(t.interes),
-        t.estado||( t.suspendido?'Suspendido':'Activo')
-      ]);
+  // Si hay backend disponible, usarlo para generar Excel con formato
+  if(API_URL){
+    const btn=document.querySelector('[onclick="exportarExcel()"]');
+    if(btn){btn.textContent='⏳ Generando...';btn.disabled=true;}
+    fetch(API_URL+'/api/exportar-excel',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    }).then(r=>{
+      if(!r.ok) throw new Error('Error '+r.status);
+      return r.blob();
+    }).then(blob=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      const nom=(state.clienteNombre||'liquidacion').replace(/ /g,'_');
+      const nip=state.clienteNIP?'_'+state.clienteNIP:'';
+      a.href=url; a.download='Liquidacion'+nip+'_'+nom+'.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+      if(btn){btn.textContent='📊 Exportar Excel';btn.disabled=false;}
+    }).catch(e=>{
+      console.error('Error generando Excel:',e);
+      if(btn){btn.textContent='📊 Exportar Excel';btn.disabled=false;}
+      alert('Error generando Excel. Intente de nuevo.');
     });
-
-    ws2data.push([]);
-    const resHdrRow = ws2data.length;
-    ws2data.push(['RESUMEN','']);
-    ws2data.push(['Capital nominal', Math.round(capital)]);
-    ws2data.push(['Total intereses moratorios', Math.round(totalInt)]);
-    const totRow2 = ws2data.length;
-    ws2data.push(['TOTAL A PAGAR', Math.round(total)]);
-    ws2data.push(['Descuento '+(pctDesc*100).toFixed(1)+'%', Math.round(desc)]);
-    ws2data.push(['VALOR COMPRA (neto descuento)', Math.round(total-desc)]);
   } else {
-    ws2data.push(['No se han calculado intereses moratorios.']);
-    ws2data.push(['Vaya a la pestaña Intereses Moratorios, ingrese los datos y calcule.']);
+    alert('Excel con formato completo requiere conexión al servidor. Use la versión en liquidador-judicial.onrender.com');
   }
-
-  const ws2 = XLSX.utils.aoa_to_sheet(ws2data);
-  ws2['!cols']=[{wch:30},{wch:13},{wch:13},{wch:6},{wch:8},{wch:10},{wch:13},{wch:14},{wch:12}];
-  ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
-
-  XLSX.utils.book_append_sheet(wb, ws2, 'Intereses Moratorios');
-
-
-  // Descargar
-  const nombre=(state.clienteNombre||'liquidacion').replace(/ /g,'_');
-  const nip=state.clienteNIP?'_'+state.clienteNIP:'';
-  XLSX.writeFile(wb, 'Liquidacion'+nip+'_'+nombre+'.xlsx');
 }
+
+
 
 
 // ══════════════════════════════════════════════════════════
