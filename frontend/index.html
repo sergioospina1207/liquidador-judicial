@@ -2265,7 +2265,7 @@ function _generarExcel(){
     mesesDTF:document.getElementById('int-meses-dtf')?.value||10,
     factorUsura:document.getElementById('int-factor-usura')?.value||1.5,
     descuento:parseFloat((pctDesc*100).toFixed(1)),
-    totalIntereses:Math.round(totalIntereses),
+    totalIntereses:Math.round(totalInteresesE),
   };
 
   const payload={
