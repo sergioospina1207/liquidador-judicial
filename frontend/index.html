@@ -1357,7 +1357,7 @@ function generarResumen(){
     '</div>'+
     '<div class="cb no-print" style="padding:8px 14px;display:flex;gap:8px">'+
     '<button class="btn btn-xs btn-o" onclick="window.print()">&#128438; Imprimir</button>'+
-    '<button class="btn btn-xs btn-o" onclick="exportarCSV()">&#128229; CSV</button> <button class="btn btn-xs btn-s" onclick="exportarExcel()">&#128202; Excel</button></div>'+
+    '<button class="btn btn-xs btn-o" onclick="exportarCSV()">&#128229; CSV</button> <button class="btn btn-xs btn-s" onclick="exportarExcel()">&#128202; Excel</button> <button class="btn btn-xs btn-o" onclick="exportarResumenPersonal()">&#128196; Respaldo</button></div>'+
     '<div class="cb" style="padding:0"><div class="tw"></div></div>';
   cont.appendChild(card);
   const tw=card.querySelector('.tw');
@@ -1564,12 +1564,15 @@ function _renderTablaHistorial(cont, hist, origen){
   wrap.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+hist.length+' liquidaciones</div>';
   const tbl=document.createElement('table');
   tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
-  tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th>Acciones</th></tr></thead>';
+  tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th class="r">Peso</th><th>Acciones</th></tr></thead>';
   const tbody=document.createElement('tbody');
   hist.forEach((h,i)=>{
     const tr=document.createElement('tr');
     if(i%2===0) tr.style.background='var(--g1)';
     // Celdas de datos
+    const pesoBytes=(h.snap||'').length;
+    const pesoLabel=pesoBytes>1024?Math.round(pesoBytes/1024)+'KB':pesoBytes+'B';
+    const pesoColor=pesoBytes>100000?'color:#c62828':pesoBytes>50000?'color:#e65100':'color:#2e7d32';
     tr.innerHTML=
       '<td style="font-size:11px;white-space:nowrap">'+h.fecha+'</td>'+
       '<td><strong>'+(h.nip||'—')+'</strong></td>'+
@@ -1579,6 +1582,7 @@ function _renderTablaHistorial(cont, hist, origen){
       '<td class="r mono">$'+fmt(h.totalBruto||h.total_bruto||0)+'</td>'+
       '<td class="r mono">$'+fmt(h.totalNeto||h.total_neto||0)+'</td>'+
       '<td class="r mono" style="font-weight:700;color:var(--vd)">$'+fmt(h.totalIndexado||h.total_indexado||0)+'</td>'+
+      '<td class="r mono" style="font-size:11px;'+pesoColor+'">'+pesoLabel+'</td>'+
       '<td style="white-space:nowrap"></td>';
     // Botones con event listeners (evita problemas de escape)
     const td=tr.lastElementChild;
@@ -1586,12 +1590,19 @@ function _renderTablaHistorial(cont, hist, origen){
     btnCargar.className='btn btn-xs btn-p';
     btnCargar.textContent='📂 Cargar';
     btnCargar.onclick=()=>_cargarHist(h.id, h._api||false, h.snap||null);
+    const btnRespaldo=document.createElement('button');
+    btnRespaldo.className='btn btn-xs btn-o';
+    btnRespaldo.textContent='📄';
+    btnRespaldo.title='Exportar respaldo de esta liquidación';
+    btnRespaldo.style.marginLeft='4px';
+    btnRespaldo.onclick=()=>_exportarRespaldoUno(h);
     const btnElim=document.createElement('button');
     btnElim.className='btn btn-xs btn-r';
     btnElim.textContent='✕';
     btnElim.style.marginLeft='4px';
     btnElim.onclick=()=>_eliminarHist(h.id, h._api||false);
     td.appendChild(btnCargar);
+    td.appendChild(btnRespaldo);
     td.appendChild(btnElim);
     tbody.appendChild(tr);
   });
@@ -2487,6 +2498,250 @@ async function doLogout(){
   const pl=document.getElementById('login-pass'); if(pl) pl.value='';
 }
 
+
+// ══════════════════════════════════════════════════════════
+// EXPORTAR RESPALDO PERSONAL (LxM + config prestaciones)
+// ══════════════════════════════════════════════════════════
+function exportarResumenPersonal(){
+  if(!Object.keys(state.ps).length && !state.años.length){
+    alert('Primero ingrese datos en el Liquidador por Mes');return;
+  }
+
+  if(typeof XLSX==='undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>_generarRespaldo();
+    document.head.appendChild(s);
+  } else { _generarRespaldo(); }
+}
+
+function _generarRespaldo(){
+  const wb=XLSX.utils.book_new();
+  const mc=MESES_C[MESES.indexOf(state.mesEjec)];
+  const ipcEj=APPD.ipc[state.añoEjec]?.[mc]||0;
+  const PREST_DEF=[
+    {key:'prodS1',     label:'Bonif. Productividad S1',  mpKey:'prodS1'},
+    {key:'prodS2',     label:'Bonif. Productividad S2',  mpKey:'prodS2'},
+    {key:'servicios',  label:'Bonif. por Servicios',     mpKey:'servicios'},
+    {key:'primaServ',  label:'Prima de Servicios',       mpKey:'primaServ'},
+    {key:'primaVac',   label:'Prima de Vacaciones',      mpKey:'primaVac'},
+    {key:'sueldoVac10',label:'Sueldo Vacaciones (1/10)', mpKey:'sueldoVac'},
+    {key:'primaNov',   label:'Prima de Navidad',         mpKey:'primaNov'},
+    {key:'cesantias',  label:'Cesantías',                mpKey:'cesantias'},
+    {key:'intereses',  label:'Intereses Cesantías',      mpKey:'intereses'},
+  ];
+
+  // Una sola hoja, todo hacia abajo
+  const rows=[];
+
+  // SECCIÓN 1: DATOS DEL CLIENTE
+  rows.push(['DATOS DEL CLIENTE']);
+  rows.push([]);
+  rows.push(['NIP',             state.clienteNIP||'—']);
+  rows.push(['Nombre',          state.clienteNombre||'—']);
+  rows.push(['Entidad',         state.clienteEntidad||'—']);
+  rows.push(['Cargo(s)',        state.clienteCargo||'—']);
+  rows.push(['Ejecutoria',      state.clienteEjecutoria||'—']);
+  rows.push(['Turno de pago',   state.clienteTurno||'—']);
+  rows.push(['Años liquidados', state.años.slice().sort((a,b)=>a-b).join(', ')]);
+  rows.push(['Mes ejecutoria',  state.mesEjec+' '+state.añoEjec]);
+  rows.push(['IPC ejecutoria',  ipcEj]);
+  rows.push(['Días vacaciones', state.diasVac||22]);
+  rows.push(['Gastos representación', state.gastosRep?'Sí ('+state.gastosPct+'%)':'No']);
+  rows.push(['Liquidación por resolución', state.resolucion?'Sí':'No']);
+  rows.push(['Honorarios %',    (state.honPct||30)+'%']);
+  rows.push(['IVA honorarios',  state.honIVA==='noasume'?'Entidad NO asume IVA':'Entidad asume IVA']);
+
+  // SECCIÓN 2: CARGOS Y DÍAS POR MES
+  rows.push([]);
+  rows.push([]);
+  rows.push(['CARGOS Y DÍAS LABORADOS']);
+  rows.push(['AÑO','MES','DÍAS','ENTIDAD','CARGO','BONIFICACIÓN','SALARIO']);
+
+  state.años.slice().sort((a,b)=>a-b).forEach(año=>{
+    MESES.forEach(mes=>{
+      const filas=state.lxm[año]?.[mes]||[];
+      filas.forEach(f=>{
+        const bon=getBon(f.entidad,f.cargo,año)||0;
+        const sal=getSal(f.entidad,f.cargo,año)||0;
+        rows.push([año, mes, f.dias, f.entidad, f.cargo,
+          Math.round(bon), Math.round(sal)]);
+      });
+    });
+  });
+
+  // SECCIÓN 3: CONFIGURACIÓN PRESTACIONES
+  rows.push([]);
+  rows.push([]);
+  rows.push(['CONFIGURACIÓN DE PRESTACIONES']);
+  rows.push(['PRESTACIÓN','AÑO','CARGO SELECCIONADO','MES DE PAGO']);
+
+  state.años.slice().sort((a,b)=>a-b).forEach(año=>{
+    let primero=true;
+    PREST_DEF.forEach(({key,label,mpKey})=>{
+      const sel=(state.selectorPrestAnual[String(año)]?.[key])||'__suma__';
+      const mes=getMesPago(String(año),mpKey);
+      let cargoLabel='';
+      if(sel==='__suma__'){
+        const cargosAño=Object.values(state.ps[año]?.resultadosPorCargo||{});
+        cargoLabel=cargosAño.length>1
+          ?'Sumar todos ('+cargosAño.map(r=>r.cargo).join(', ')+')'
+          :(cargosAño[0]?.cargo||'—');
+      } else {
+        const partes=sel.split('|');
+        cargoLabel=(partes[1]||sel)+' ('+partes[0]+')';
+      }
+      rows.push([label, año, cargoLabel, mes==='NO'?'No pagado':mes]);
+    });
+    rows.push([]); // separador entre años
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:30},{wch:12},{wch:8},{wch:12},{wch:40},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,'Respaldo Liquidación');
+
+  const nom=(state.clienteNombre||'respaldo').replace(/ /g,'_');
+  const nip=state.clienteNIP?state.clienteNIP+'_':'';
+  XLSX.writeFile(wb,'Respaldo_'+nip+nom+'.xlsx');
+}
+
+
+// ══════════════════════════════════════════════════════════
+// EXPORTAR RESPALDO DESDE HISTORIAL
+// ══════════════════════════════════════════════════════════
+function _snapToRows(snap, etiqueta){
+  // Extrae LxM y config de un snap y devuelve filas para Excel
+  const rows=[];
+  try{
+    const s=typeof snap==='string'?JSON.parse(snap):snap;
+    const años=(s.años||[]).slice().sort((a,b)=>a-b);
+    const MESES_L=['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const PREST=[
+      {key:'prodS1',label:'Bonif. Prod S1',mpKey:'prodS1'},
+      {key:'prodS2',label:'Bonif. Prod S2',mpKey:'prodS2'},
+      {key:'servicios',label:'Bonif. Servicios',mpKey:'servicios'},
+      {key:'primaServ',label:'Prima Servicios',mpKey:'primaServ'},
+      {key:'primaVac',label:'Prima Vacaciones',mpKey:'primaVac'},
+      {key:'sueldoVac10',label:'Sueldo Vac (1/10)',mpKey:'sueldoVac'},
+      {key:'primaNov',label:'Prima Navidad',mpKey:'primaNov'},
+      {key:'cesantias',label:'Cesantías',mpKey:'cesantias'},
+      {key:'intereses',label:'Intereses Ces.',mpKey:'intereses'},
+    ];
+
+    // Encabezado de la liquidación
+    rows.push(['── '+etiqueta+' ──']);
+    rows.push(['NIP',s.clienteNIP||'—','Nombre',s.clienteNombre||'—']);
+    rows.push(['Ejecutoria',s.clienteEjecutoria||'—','Turno',s.clienteTurno||'—']);
+    rows.push(['Mes ejec.',( s.mesEjec||'')+' '+(s.añoEjec||''),'Años',años.join(', ')]);
+    rows.push([]);
+
+    // Cargos y días
+    rows.push(['AÑO','MES','DÍAS','ENTIDAD','CARGO']);
+    años.forEach(año=>{
+      MESES_L.forEach(mes=>{
+        const filas=(s.lxm?.[año]?.[mes])||[];
+        filas.forEach(f=>{
+          rows.push([año, mes, f.dias, f.entidad, f.cargo]);
+        });
+      });
+    });
+    rows.push([]);
+
+    // Config prestaciones
+    rows.push(['PRESTACIÓN','AÑO','CARGO SELECCIONADO','MES DE PAGO']);
+    años.forEach(año=>{
+      PREST.forEach(({key,label,mpKey})=>{
+        const sel=(s.selectorPrestAnual?.[String(año)]?.[key])||'__suma__';
+        const mp=(s.mesesPagoAnual?.[String(año)]?.[mpKey])||'Diciembre';
+        const cargoLabel=sel==='__suma__'?'Sumar todos':sel.split('|')[1]||sel;
+        rows.push([label, año, cargoLabel, mp==='NO'?'No pagado':mp]);
+      });
+      rows.push([]);
+    });
+    rows.push([]);rows.push([]);
+  }catch(e){ rows.push(['Error leyendo snap:',e.message]); }
+  return rows;
+}
+
+function _exportarRespaldoUno(h){
+  if(!h.snap){ alert('Esta liquidación no tiene datos para exportar.'); return; }
+  if(typeof XLSX==='undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>_exportarRespaldoUno(h);
+    document.head.appendChild(s); return;
+  }
+  const wb=XLSX.utils.book_new();
+  const rows=_snapToRows(h.snap, (h.nip||'')+(h.nombre?' — '+h.nombre:''));
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:22},{wch:12},{wch:6},{wch:12},{wch:38},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,'Respaldo');
+  const nom=((h.nombre||'liq').replace(/ /g,'_'));
+  const nip=h.nip?h.nip+'_':'';
+  XLSX.writeFile(wb,'Respaldo_'+nip+nom+'.xlsx');
+}
+
+async function exportarTodoHistorial(){
+  // Cargar todo el historial (localStorage + servidor)
+  let hist=[];
+  const apiRes=await apiCall('GET','/api/historial');
+  if(apiRes?.data?.length){
+    hist=apiRes.data.map(h=>({
+      id:h.id, nip:h.nip, nombre:h.nombre, años:h.años,
+      mesEjec:h.mes_ejec, snap:h.snap,
+      totalBruto:h.total_bruto, totalNeto:h.total_neto, totalIndexado:h.total_indexado
+    }));
+  } else {
+    try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
+  }
+
+  if(!hist.length){ alert('No hay liquidaciones en el historial.'); return; }
+
+  if(typeof XLSX==='undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>exportarTodoHistorial();
+    document.head.appendChild(s); return;
+  }
+
+  const wb=XLSX.utils.book_new();
+  const allRows=[];
+
+  // Hoja 1: Resumen del historial
+  allRows.push(['HISTORIAL DE LIQUIDACIONES — EXPORTADO '+new Date().toLocaleDateString('es-CO')]);
+  allRows.push([]);
+  allRows.push(['#','FECHA','NIP','NOMBRE','AÑOS','EJECUTORIA','BRUTO','NETO','INDEXADO','PESO SNAP']);
+  hist.forEach((h,i)=>{
+    const peso=h.snap?(h.snap.length>1024?Math.round(h.snap.length/1024)+'KB':h.snap.length+'B'):'—';
+    allRows.push([i+1,h.fecha||'—',h.nip||'—',h.nombre||'—',h.años||'—',
+      h.mesEjec||'—',h.totalBruto||0,h.totalNeto||0,h.totalIndexado||0,peso]);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(allRows);
+  ws1['!cols']=[{wch:4},{wch:16},{wch:8},{wch:25},{wch:30},{wch:12},{wch:14},{wch:14},{wch:14},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Resumen Historial');
+
+  // Hoja 2: Detalle LxM de todas las liquidaciones
+  const detRows=[];
+  detRows.push(['DETALLE DE CARGOS Y DÍAS — TODAS LAS LIQUIDACIONES']);
+  detRows.push([]);
+  let conSnap=0, sinSnap=0;
+  hist.forEach(h=>{
+    if(h.snap){
+      const rows=_snapToRows(h.snap, '#'+(hist.indexOf(h)+1)+' | NIP '+h.nip+' — '+h.nombre);
+      rows.forEach(r=>detRows.push(r));
+      conSnap++;
+    } else { sinSnap++; }
+  });
+  if(sinSnap>0) detRows.push(['Nota: '+sinSnap+' liquidación(es) sin datos de cargos (snap no disponible)']);
+  const ws2=XLSX.utils.aoa_to_sheet(detRows);
+  ws2['!cols']=[{wch:22},{wch:12},{wch:6},{wch:12},{wch:38},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Detalle Cargos');
+
+  XLSX.writeFile(wb,'HistorialCompleto_'+new Date().toLocaleDateString('es-CO').replace(/\//g,'-')+'.xlsx');
+  alert('✅ Exportadas '+hist.length+' liquidaciones ('+conSnap+' con detalle de cargos).');
+}
+
 init();
 _cargarCargosLocal();
 _sincronizarCargosAPI();
@@ -2500,9 +2755,11 @@ restaurarSesionLocal();
 <!-- ═══ TAB 8: HISTORIAL ═══ -->
 <div class="tab-content" id="tab-historial">
   <div class="card">
-    <div class="ch" style="justify-content:space-between">
+    <div class="ch" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
       <span>🗂️ Historial de liquidaciones</span>
-      <button class="btn btn-xs btn-r no-print" onclick="limpiarHistorial()">🗑️ Limpiar todo</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-xs btn-r no-print" onclick="limpiarHistorial()">🗑️ Limpiar todo</button>
+      </div>
     </div>
     <div class="cb">
       <div class="info-box">💡 Cada vez que genera el Resumen, la liquidación se guarda aquí automáticamente identificada por NIP y nombre. Haga clic en <strong>Cargar</strong> para restaurar todos los datos de esa liquidación.</div>
