@@ -188,13 +188,13 @@ def generar_excel(data: dict) -> bytes:
     res = resumen
     if res.get('modo') == 'resolucion':
         res_rows = [
-            ('NETO Indexado', res.get('netoIdx',0), GR_CLR, False),
+            ('NETO Indexado (prestaciones)', res.get('netoIdx',0), GR_CLR, False),
             (f"Pensión Empleador 12% (base: ${res.get('baseRes',0):,})", res.get('pension',0), GR_CLR, False),
             ('Salud Empleador 8.5%', res.get('salud',0), GR_CLR, False),
             ('TOTAL CON APORTES', res.get('totalAportes',0), AZ_CLR, True),
-            (f"Honorarios {res.get('honPct',30)}%", res.get('honV',0), NAR, False),
-            *([('IVA 19% sobre honorarios', res.get('honIvaV',0), NAR, False)]
-              if res.get('honIVA')=='noasume' else []),
+            ('Intereses moratorios', res.get('intereses',0), GR_CLR, False),
+            ('TOTAL A PAGAR', res.get('totalFin',0), AZ_OSC, True),
+            (f"Honorarios {res.get('honPct',30)}%"+(' + IVA 19%' if res.get('honIVA')=='noasume' else ' (IVA incluido)'), res.get('honV',0)+res.get('honIvaV',0), NAR, False),
             ('VALOR FINAL CLIENTE', res.get('valorFinal',0), VD_OSC, True),
         ]
     else:
@@ -217,6 +217,17 @@ def generar_excel(data: dict) -> bytes:
         sc(ws1,cr,RC1,lbl,bold=bld,bg=bgr,fg=fgr,size=8,b=THIN)
         fr(ws1,cr,RC1+1,TOTAL_COLS-1,bgr,THIN)
         sc(ws1,cr,TOTAL_COLS,val,bold=bld,bg=bgr,fg=fgr,size=8,h='right',nf=NUM,b=THIN)
+
+
+    # ── Pie de página disclaimer ──────────────────────────
+    disclaimer = "Los valores presentados en este documento son el resultado de un proceso de liquidación con base en la información suministrada y las tasas vigentes a la fecha de corte. No constituyen reconocimiento ni obligación de pago. El valor final estará sujeto a la forma en que cada entidad realice la liquidación al momento de la resolución de pago."
+    cr += 2
+    ws1.row_dimensions[cr].height = 28
+    ws1.merge_cells(f'A{cr}:{last_col}{cr}')
+    disc_cell = ws1.cell(row=cr, column=1, value=disclaimer)
+    disc_cell.font = Font(name='Arial Narrow', size=7, italic=True, color='808080')
+    disc_cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    disc_cell.fill = PatternFill('solid', fgColor='F9F9F9')
 
     ws1.freeze_panes = 'A9'
 
@@ -337,6 +348,17 @@ def generar_excel(data: dict) -> bytes:
         fr(ws2,cr2,2,7,bgr,THIN)
         ws2.merge_cells(f'H{cr2}:I{cr2}')
         sc(ws2,cr2,8,val,bold=bld,bg=bgr,fg=fgr,size=8,h='right',nf=NUM if val else None,b=THIN)
+
+
+    # ── Pie de página disclaimer ──────────────────────────
+    disclaimer = "Los valores presentados en este documento son el resultado de un proceso de liquidación con base en la información suministrada y las tasas vigentes a la fecha de corte. No constituyen reconocimiento ni obligación de pago. El valor final estará sujeto a la forma en que cada entidad realice la liquidación al momento de la resolución de pago."
+    cr2 += 2
+    ws2.row_dimensions[cr2].height = 28
+    ws2.merge_cells(f'A{cr2}:I{cr2}')
+    disc_cell2 = ws2.cell(row=cr2, column=1, value=disclaimer)
+    disc_cell2.font = Font(name='Arial Narrow', size=7, italic=True, color='808080')
+    disc_cell2.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    disc_cell2.fill = PatternFill('solid', fgColor='F9F9F9')
 
     ws2.freeze_panes = 'A13'
 
