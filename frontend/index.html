@@ -2284,7 +2284,7 @@ function _generarExcel(){
 
   let resumen={};
   if(state.resolucion){
-    const baseResE=state._gBaseResolucion||gBaseResolucion||0;
+    const baseResE=state._gBaseResolucion||0;
     const pensionE=baseResE*0.12, saludE=baseResE*0.085;
     const totalApE=netoIdxE+pensionE+saludE;
     const totalFinE=totalApE+totalInteresesE;
