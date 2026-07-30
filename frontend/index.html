@@ -1561,12 +1561,12 @@ function _renderTablaHistorial(cont, hist, origen){
     return;
   }
   const wrap=document.createElement('div');
-  wrap.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+hist.length+' liquidaciones</div>';
+  wrap.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+histFiltrado.length+' liquidaciones'+(histFiltrado.length!==hist.length?' (filtradas de '+hist.length+')':'')+' | <span style="color:#1e5631;font-weight:600">RAMA: '+cRama+'</span> | <span style="color:#1F3864;font-weight:600">FISCALÍA: '+cFisc+'</span></div>';
   const tbl=document.createElement('table');
   tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
   tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th class="r">Peso</th><th>Acciones</th></tr></thead>';
   const tbody=document.createElement('tbody');
-  hist.forEach((h,i)=>{
+  histFiltrado.forEach((h,i)=>{
     const tr=document.createElement('tr');
     if(i%2===0) tr.style.background='var(--g1)';
     // Celdas de datos
@@ -2742,6 +2742,46 @@ async function exportarTodoHistorial(){
   alert('✅ Exportadas '+hist.length+' liquidaciones ('+conSnap+' con detalle de cargos).');
 }
 
+
+// ══════════════════════════════════════════════════════════
+// FILTRO DE HISTORIAL POR ENTIDAD
+// ══════════════════════════════════════════════════════════
+let _histTabActivo = 'todas';
+
+function setHistTab(tab){
+  _histTabActivo = tab;
+  // Actualizar estilos de tabs
+  ['todas','rama','fisc'].forEach(t=>{
+    const btn=document.getElementById('htab-'+t);
+    if(!btn) return;
+    btn.className=t===tab?'btn btn-p':'btn btn-o';
+  });
+  renderHistorial();
+}
+
+function _entidadDesnap(h){
+  // Detectar entidad desde el campo entidad del snap o desde el nombre del cargo
+  try{
+    if(h.snap){
+      const s=JSON.parse(h.snap);
+      const ent=(s.clienteEntidad||'').toUpperCase();
+      if(ent.includes('FISCAL')) return 'FISCALÍA';
+      if(ent.includes('RAMA'))   return 'RAMA';
+      // Buscar en el LxM
+      const lxm=s.lxm||{};
+      for(const año of Object.keys(lxm)){
+        for(const mes of Object.keys(lxm[año])){
+          for(const f of (lxm[año][mes]||[])){
+            if(f.entidad==='FISCALÍA') return 'FISCALÍA';
+            if(f.entidad==='RAMA')     return 'RAMA';
+          }
+        }
+      }
+    }
+  }catch(e){}
+  return 'OTRA';
+}
+
 init();
 _cargarCargosLocal();
 _sincronizarCargosAPI();
@@ -2763,6 +2803,12 @@ restaurarSesionLocal();
     </div>
     <div class="cb">
       <div class="info-box">💡 Cada vez que genera el Resumen, la liquidación se guarda aquí automáticamente identificada por NIP y nombre. Haga clic en <strong>Cargar</strong> para restaurar todos los datos de esa liquidación.</div>
+      <!-- Tabs filtro entidad -->
+      <div style="display:flex;gap:8px;margin-bottom:12px" id="hist-tabs">
+        <button class="btn btn-p" id="htab-todas" onclick="setHistTab('todas')">📋 Todas</button>
+        <button class="btn btn-o" id="htab-rama"  onclick="setHistTab('rama')">🏛️ RAMA</button>
+        <button class="btn btn-o" id="htab-fisc"  onclick="setHistTab('fisc')">⚖️ FISCALÍA</button>
+      </div>
       <div id="hist-lista"><p style="color:var(--tx2);font-size:13px">No hay liquidaciones guardadas aún.</p></div>
     </div>
   </div>
