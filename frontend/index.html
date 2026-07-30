@@ -1416,7 +1416,9 @@ function generarResumen(){
       const esPosteriorEjec=(parseInt(año)>state.añoEjec)||(parseInt(año)===state.añoEjec&&mesIdx>=ejecIdx);
       const fac=esPosteriorEjec?1:((ipcI&&ipcEj)?ipcEj/ipcI:1);
       const nIdx=neto*fac;
-      if(bruto>0||dMes>0){gB+=bruto;gI+=ibc;gD+=ded;gN+=neto;gX+=nIdx;COLS.forEach(c=>{cT[c.key]+=(vC[c.key]||0);});}
+      if(bruto>0||dMes>0){gB+=bruto;gI+=ibc;gD+=ded;gN+=neto;gX+=nIdx;
+        gBaseResolucion+=(vC['prodS1']||0)+(vC['prodS2']||0)+(vC['servicios']||0);
+        COLS.forEach(c=>{cT[c.key]+=(vC[c.key]||0);});}
       const emp=bruto===0&&dMes===0;
       const tr=document.createElement('tr');
       if(!emp) tr.style.background=MESES.indexOf(mes)%2===0?'':'#f9fafb';
