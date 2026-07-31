@@ -188,6 +188,8 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
           <input type="text" id="cli-entidad" placeholder="Ej: RAMA JUDICIAL" oninput="state.clienteEntidad=this.value;autoGuardarLocal()"></div>
         <div class="fg"><label>Cargo(s)</label>
           <input type="text" id="cli-cargo" placeholder="Ej: Escribiente Municipal" oninput="state.clienteCargo=this.value;autoGuardarLocal()"></div>
+        <div class="fg"><label>Fecha prescripción</label>
+          <input type="date" id="cli-prescripcion" onchange="state.clientePrescripcion=this.value;autoGuardarLocal()"></div>
         <div class="fg"><label>Fecha ejecutoria de la sentencia</label>
           <input type="date" id="cli-ejecutoria" onchange="state.clienteEjecutoria=this.value;autoGuardarLocal()"></div>
         <div class="fg"><label>Turno de pago</label>
@@ -1539,7 +1541,7 @@ function _marcarCambio(){
 }
 async function _guardarHistorial(totales){
   const ahora=new Date();
-  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',años:state.años,lxm:state.lxm,mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false,honPct:state.honPct||30,honIVA:state.honIVA||'asume'});
+  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clientePrescripcion:state.clientePrescripcion||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',años:state.años,lxm:state.lxm,mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false,honPct:state.honPct||30,honIVA:state.honIVA||'asume'});
   const entrada={
     id:Date.now(),
     fecha:ahora.toLocaleDateString('es-CO')+' '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
@@ -1697,7 +1699,7 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
     Object.assign(state,{
       clienteNIP:s.clienteNIP||'', clienteNombre:s.clienteNombre||'',
       clienteEntidad:s.clienteEntidad||'', clienteCargo:s.clienteCargo||'',
-      clienteEjecutoria:s.clienteEjecutoria||'', clienteTurno:s.clienteTurno||'',
+      clientePrescripcion:s.clientePrescripcion||'', clienteEjecutoria:s.clienteEjecutoria||'', clienteTurno:s.clienteTurno||'',
       años:s.años||[], lxm:s.lxm||{},
       mesEjec:s.mesEjec||'Mayo', añoEjec:s.añoEjec||2025,
       diasVac:s.diasVac||22, gastosRep:s.gastosRep||false, gastosPct:s.gastosPct||33.33, resolucion:s.resolucion||false,honPct:s.honPct||30,honIVA:s.honIVA||'asume'
@@ -1707,6 +1709,7 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
     const nm=document.getElementById('cli-nombre');if(nm)nm.value=state.clienteNombre;
     const ne=document.getElementById('cli-entidad');if(ne)ne.value=state.clienteEntidad||'';
     const nc=document.getElementById('cli-cargo');if(nc)nc.value=state.clienteCargo||'';
+    const npr=document.getElementById('cli-prescripcion');if(npr)npr.value=state.clientePrescripcion||'';
     const nej=document.getElementById('cli-ejecutoria');if(nej)nej.value=state.clienteEjecutoria||'';
     const nt=document.getElementById('cli-turno');if(nt)nt.value=state.clienteTurno||'';
     const dv=document.getElementById('g-diasVac');if(dv)dv.value=state.diasVac;
@@ -2088,7 +2091,7 @@ function autoGuardarLocal(){
     const snap={
       clienteNIP:state.clienteNIP, clienteNombre:state.clienteNombre,
       clienteEntidad:state.clienteEntidad||'', clienteCargo:state.clienteCargo||'',
-      clienteEjecutoria:state.clienteEjecutoria||'', clienteTurno:state.clienteTurno||'',
+      clientePrescripcion:state.clientePrescripcion||'', clienteEjecutoria:state.clienteEjecutoria||'', clienteTurno:state.clienteTurno||'',
       años:state.años, lxm:state.lxm, mesesPagoAnual:state.mesesPagoAnual,
       selectorPrestAnual:state.selectorPrestAnual,
       mesEjec:state.mesEjec, añoEjec:state.añoEjec,
