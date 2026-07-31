@@ -2882,8 +2882,12 @@ async function procesarCertificado(){
 
   try{
     // Validar que tenga prescripción y ejecutoria
-    const presc=state.clientePrescripcion||'';
-    const ejec=state.clienteEjecutoria||'';
+    // Leer directo del DOM para evitar problemas con el state
+    const presc=document.getElementById('cli-prescripcion')?.value||state.clientePrescripcion||'';
+    const ejec=document.getElementById('cli-ejecutoria')?.value||state.clienteEjecutoria||'';
+    // Actualizar state
+    if(presc) state.clientePrescripcion=presc;
+    if(ejec) state.clienteEjecutoria=ejec;
     if(!presc||!ejec){
       alert('Por favor ingrese la Fecha de Prescripción y la Fecha de Ejecutoria antes de procesar el certificado.');
       document.getElementById('cert-loading').style.display='none';
