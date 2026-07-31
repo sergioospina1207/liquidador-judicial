@@ -1,7 +1,7 @@
 """
 Liquidador de Bonificación Judicial — Backend API
 """
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 import io
 from fastapi.middleware.cors import CORSMiddleware
@@ -241,6 +241,35 @@ def supa_config():
     url = os.getenv("SUPABASE_URL","")
     key = os.getenv("SUPABASE_KEY","")
     return {"url": url, "key": key}
+
+
+@app.post("/api/extraer-certificado")
+async def extraer_certificado(
+    file: UploadFile = File(...),
+    entidad: str = Form(default="RAMA")
+):
+    """Extrae cargos y fechas de un certificado PDF usando Claude."""
+    try:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise HTTPException(400, "ANTHROPIC_API_KEY no configurada")
+        
+        contenido = await file.read()
+        if len(contenido) > 10 * 1024 * 1024:  # 10MB máximo
+            raise HTTPException(400, "Archivo muy grande (máximo 10MB)")
+        
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from cert_extractor import extraer_cargos_pdf
+        
+        resultado = extraer_cargos_pdf(contenido, entidad)
+        return resultado
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error extrayendo certificado: {e}")
+        import traceback; traceback.print_exc()
+        raise HTTPException(500, f"Error procesando certificado: {str(e)}")
 
 @app.post("/api/exportar-excel")
 async def exportar_excel(request: Request):
