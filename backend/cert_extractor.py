@@ -102,7 +102,7 @@ Responde SOLO con un JSON válido con esta estructura exacta, sin texto adiciona
 Si una fecha no está clara, usa null. Sé preciso con las fechas."""
 
     response = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         max_tokens=4000,
         messages=[{
             "role": "user",
