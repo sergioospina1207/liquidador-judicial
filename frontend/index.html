@@ -2958,62 +2958,68 @@ function renderCertResultados(cargos){
 
 function aplicarCargosLxM(){
   if(!_certCargosDetectados.length){alert('No hay cargos para aplicar');return;}
-  
-  let aplicados=0, omitidos=0;
-  
-  _certCargosDetectados.forEach(c=>{
-    if(!c.cargo_app||!c.fecha_inicio) return;
-    
-    // Parsear fechas DD/MM/YYYY
-    const parseFecha=(s)=>{
-      if(!s) return null;
-      const p=s.split('/');
-      if(p.length!==3) return null;
-      return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
-    };
-    
-    const fIni=parseFecha(c.fecha_inicio);
-    const fFin=parseFecha(c.fecha_fin)||new Date();
-    if(!fIni){omitidos++;return;}
-    
-    // Detectar entidad del cargo
-    const entidad=APPD.rama.includes(c.cargo_app)?'RAMA':'FISCALÍA';
-    
-    // Iterar mes a mes
-    let cur=new Date(fIni.getFullYear(),fIni.getMonth(),1);
-    const fin=new Date(fFin.getFullYear(),fFin.getMonth(),1);
-    
-    while(cur<=fin){
-      const año=cur.getFullYear().toString();
-      const mes=MESES[cur.getMonth()];
-      
-      if(!state.años.includes(parseInt(año))){cur.setMonth(cur.getMonth()+1);continue;}
+
+  const parseFecha=(s)=>{
+    if(!s) return null;
+    const p=s.trim().split('/');
+    if(p.length===3) return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+    const p2=s.trim().split('-');
+    if(p2.length===3) return new Date(parseInt(p2[0]),parseInt(p2[1])-1,parseInt(p2[2]));
+    return null;
+  };
+
+  const cargosValidos=_certCargosDetectados
+    .filter(c=>c.cargo_app&&c.fecha_inicio)
+    .map(c=>({
+      ...c,
+      fIni:parseFecha(c.fecha_inicio),
+      fFin:parseFecha(c.fecha_fin)||new Date()
+    }))
+    .filter(c=>c.fIni);
+
+  let aplicados=0;
+
+  state.años.forEach(año=>{
+    MESES.forEach((mes,mi)=>{
+      const inicioMes=new Date(parseInt(año),mi,1);
+      const finMes=new Date(parseInt(año),mi+1,0);
+
+      // Cargos que aplican en este mes
+      const cargosDelMes=cargosValidos.filter(c=>c.fIni<=finMes&&c.fFin>=inicioMes);
+      if(!cargosDelMes.length) return;
+
       if(!state.lxm[año]) state.lxm[año]={};
       if(!state.lxm[año][mes]) state.lxm[año][mes]=[];
-      
-      // Calcular días del mes (del inicio al fin dentro del mes)
-      const inicioMes=new Date(cur.getFullYear(),cur.getMonth(),1);
-      const finMes=new Date(cur.getFullYear(),cur.getMonth()+1,0);
-      const desdeDia=(cur.getFullYear()===fIni.getFullYear()&&cur.getMonth()===fIni.getMonth())?fIni.getDate():1;
-      const hastaDia=(cur.getFullYear()===fFin.getFullYear()&&cur.getMonth()===fFin.getMonth())?fFin.getDate():finMes.getDate();
-      const dias=Math.max(1,hastaDia-desdeDia+1);
-      
-      // Verificar si ya existe el cargo en ese mes
-      const existe=state.lxm[año][mes].find(f=>f.cargo===c.cargo_app&&f.entidad===entidad);
-      if(!existe){
-        state.lxm[año][mes].push({entidad,cargo:c.cargo_app,dias});
-        aplicados++;
-      }
-      
-      cur.setMonth(cur.getMonth()+1);
-    }
+
+      let acumulado=0;
+
+      cargosDelMes.forEach(c=>{
+        if(acumulado>=30) return;
+
+        // Días exactos que este cargo ocupa en este mes
+        const desdeEnMes=c.fIni>inicioMes?c.fIni:inicioMes;
+        const hastaEnMes=c.fFin<finMes?c.fFin:finMes;
+        let diasCargo=Math.round((hastaEnMes-desdeEnMes)/(1000*60*60*24))+1;
+
+        // Topar para no superar 30 en total
+        diasCargo=Math.min(diasCargo,30-acumulado);
+        if(diasCargo<=0) return;
+
+        // No duplicar el mismo cargo en el mismo mes
+        const yaExiste=state.lxm[año][mes].find(f=>f.cargo===c.cargo_app&&f.entidad==='RAMA');
+        if(!yaExiste){
+          state.lxm[año][mes].push({entidad:'RAMA',cargo:c.cargo_app,dias:diasCargo});
+          acumulado+=diasCargo;
+          aplicados++;
+        }
+      });
+    });
   });
-  
-  // Reconstruir UI del LxM
+
   buildLxM();
   autoGuardarLocal();
   cerrarModalCert();
-  alert(`✅ Aplicado: ${aplicados} entradas en el Liquidador por Mes.`+(omitidos>0?`\n⚠️ ${omitidos} cargos omitidos (sin fecha o sin cargo seleccionado).`:''));
+  alert('✅ Cargos aplicados en el Liquidador por Mes.\nRevise y ajuste los días si es necesario.');
 }
 
 init();
