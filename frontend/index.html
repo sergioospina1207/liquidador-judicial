@@ -2881,9 +2881,20 @@ async function procesarCertificado(){
   document.getElementById('btn-procesar-cert').disabled=true;
 
   try{
+    // Validar que tenga prescripción y ejecutoria
+    const presc=state.clientePrescripcion||'';
+    const ejec=state.clienteEjecutoria||'';
+    if(!presc||!ejec){
+      alert('Por favor ingrese la Fecha de Prescripción y la Fecha de Ejecutoria antes de procesar el certificado.');
+      document.getElementById('cert-loading').style.display='none';
+      document.getElementById('btn-procesar-cert').disabled=false;
+      return;
+    }
     const formData=new FormData();
     formData.append('file',_certFile);
     formData.append('entidad',state.clienteEntidad||'RAMA');
+    formData.append('fecha_prescripcion',presc);
+    formData.append('fecha_ejecutoria',ejec);
     
     const res=await fetch(API_URL+'/api/extraer-certificado',{
       method:'POST',body:formData
@@ -3026,8 +3037,7 @@ restaurarSesionLocal();
     </div>
 
     <div class="info-box" style="margin-bottom:16px">
-      ⚠️ Antes de continuar verifique que ha ingresado: <strong>NIP, Nombre, Entidad, Ejecutoria y Turno de pago</strong>. 
-      Claude extraerá únicamente los <strong>cargos y fechas</strong> del certificado.
+      ⚠️ Antes de continuar verifique que ha ingresado: <strong>Prescripción y Ejecutoria</strong> — Claude solo extraerá los cargos dentro de ese rango de fechas.
     </div>
 
     <div id="cert-upload-area" style="border:2px dashed var(--az);border-radius:10px;
