@@ -63,7 +63,7 @@ def comparar_cargo(cargo_cert: str, lista_cargos: list) -> tuple:
     
     return mejor, mejor_score
 
-def extraer_cargos_pdf(pdf_bytes: bytes, entidad: str = "RAMA") -> dict:
+def extraer_cargos_pdf(pdf_bytes: bytes, entidad: str = "RAMA", fecha_desde: str = None, fecha_hasta: str = None) -> dict:
     """
     Extrae cargos y fechas de un certificado PDF usando Claude.
     Retorna dict con lista de cargos procesados.
@@ -72,27 +72,38 @@ def extraer_cargos_pdf(pdf_bytes: bytes, entidad: str = "RAMA") -> dict:
     
     pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
     
-    prompt = """Analiza este certificado judicial colombiano y extrae ÚNICAMENTE:
+    # Construir filtro de fechas para el prompt
+    filtro_fechas = ""
+    if fecha_desde and fecha_hasta:
+        filtro_fechas = f"""
+IMPORTANTE: Solo extrae los cargos cuyo período se superponga con el rango:
+- Fecha inicio del rango (prescripción): {fecha_desde}
+- Fecha fin del rango (ejecutoria): {fecha_hasta}
+Incluye un cargo si su período toca aunque sea parcialmente este rango.
+Ignora los cargos completamente fuera de este rango."""
+
+    prompt = f"""Analiza este certificado judicial colombiano y extrae ÚNICAMENTE:
 1. Los cargos ejercidos (primera columna)
 2. La fecha de inicio de cada cargo
 3. La fecha de fin de cada cargo
+{filtro_fechas}
 
 Responde SOLO con un JSON válido con esta estructura exacta, sin texto adicional:
-{
+{{
   "cargos": [
-    {
+    {{
       "cargo": "nombre exacto del cargo como aparece en el documento",
       "fecha_inicio": "DD/MM/YYYY",
       "fecha_fin": "DD/MM/YYYY"
-    }
+    }}
   ]
-}
+}}
 
-Si una fecha no está clara, usa null. Extrae TODOS los registros que aparezcan."""
+Si una fecha no está clara, usa null. Sé preciso con las fechas."""
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=2000,
+        max_tokens=4000,
         messages=[{
             "role": "user",
             "content": [
@@ -117,7 +128,32 @@ Si una fecha no está clara, usa null. Extrae TODOS los registros que aparezcan.
     raw = re.sub(r'^```json?\s*', '', raw)
     raw = re.sub(r'\s*```$', '', raw)
     
-    data = json.loads(raw)
+    # Intentar reparar JSON incompleto — cerrar brackets si fue truncado
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        # Intentar extraer lo que se pudo parsear
+        # Buscar el último objeto completo antes del error
+        idx_last = raw.rfind('},')
+        if idx_last > 0:
+            raw_fixed = raw[:idx_last+1] + '\n  ]\n}'
+            try:
+                data = json.loads(raw_fixed)
+            except:
+                # Último recurso: extraer con regex
+                data = {'cargos': []}
+                matches = re.findall(
+                    r'"cargo"\s*:\s*"([^"]+)".*?"fecha_inicio"\s*:\s*"?([^",}]+)"?.*?"fecha_fin"\s*:\s*"?([^",}]+)"?',
+                    raw, re.DOTALL
+                )
+                for m in matches:
+                    data['cargos'].append({
+                        'cargo': m[0],
+                        'fecha_inicio': m[1].strip() if m[1].strip() != 'null' else None,
+                        'fecha_fin': m[2].strip() if m[2].strip() != 'null' else None
+                    })
+        else:
+            data = {'cargos': []}
     cargos_raw = data.get("cargos", [])
     
     # Comparar con lista de cargos de la app
