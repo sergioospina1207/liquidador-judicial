@@ -226,6 +226,7 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
       <div class="bgrp no-print">
         <button class="btn btn-p" onclick="buildLxM()">🔄 Generar tabla de meses</button>
         <button class="btn btn-o" onclick="nuevaLiquidacion()">🆕 Nueva liquidación</button>
+        <button class="btn btn-o" id="btn-cert" onclick="abrirCargaCertificado()">📄 Cargar certificado</button>
       </div>
     </div>
   </div>
@@ -2220,6 +2221,15 @@ function exportarExcel(){
 }
 
 function _generarExcel(){
+  // Si intTramos está vacío pero hay parámetros guardados, recalcular
+  if(!intTramos.length){
+    const fi=document.getElementById('int-fecha-ini')?.value;
+    const ff=document.getElementById('int-fecha-fin')?.value;
+    const cap=parseCapital();
+    if(fi&&ff&&cap){
+      calcularIntereses();
+    }
+  }
   // Preparar datos para enviar al backend que genera el Excel con formato
   const mc=MESES_C[MESES.indexOf(state.mesEjec)];
   const ipcEj=APPD.ipc[state.añoEjec]?.[mc]||0;
@@ -2804,6 +2814,194 @@ function _entidadDesnap(h){
   return 'OTRA';
 }
 
+
+// ══════════════════════════════════════════════════════════
+// CARGA Y PROCESAMIENTO DE CERTIFICADOS CON CLAUDE
+// ══════════════════════════════════════════════════════════
+let _certFile = null;
+let _certCargosDetectados = [];
+
+function abrirCargaCertificado(){
+  if(!state.años.length){
+    alert('Primero genere la tabla de meses seleccionando los años y presionando "Generar tabla de meses".');
+    return;
+  }
+  const modal=document.getElementById('modal-cert');
+  modal.style.display='flex';
+  limpiarCertFile();
+  document.getElementById('cert-resultados').style.display='none';
+  document.getElementById('cert-loading').style.display='none';
+}
+
+function cerrarModalCert(){
+  document.getElementById('modal-cert').style.display='none';
+}
+
+function onCertDrop(e){
+  e.preventDefault();
+  const file=e.dataTransfer.files[0];
+  if(file) setCertFile(file);
+}
+
+function onCertFileSelect(e){
+  const file=e.target.files[0];
+  if(file) setCertFile(file);
+}
+
+function setCertFile(file){
+  if(!file.name.endsWith('.pdf')){
+    alert('Solo se aceptan archivos PDF');return;
+  }
+  if(file.size>10*1024*1024){
+    alert('El archivo es muy grande (máximo 10MB)');return;
+  }
+  _certFile=file;
+  document.getElementById('cert-nombre-archivo').textContent=file.name+' ('+Math.round(file.size/1024)+'KB)';
+  document.getElementById('cert-archivo-sel').style.display='block';
+  document.getElementById('btn-procesar-cert').disabled=false;
+}
+
+function limpiarCertFile(){
+  _certFile=null;
+  document.getElementById('cert-archivo-sel').style.display='none';
+  document.getElementById('btn-procesar-cert').disabled=true;
+  document.getElementById('cert-file-input').value='';
+  document.getElementById('cert-resultados').style.display='none';
+}
+
+async function procesarCertificado(){
+  if(!_certFile){alert('Seleccione un archivo PDF primero');return;}
+  if(!API_URL){alert('Se requiere conexión al servidor para usar esta función.');return;}
+  
+  document.getElementById('cert-loading').style.display='block';
+  document.getElementById('cert-resultados').style.display='none';
+  document.getElementById('btn-procesar-cert').disabled=true;
+
+  try{
+    const formData=new FormData();
+    formData.append('file',_certFile);
+    formData.append('entidad',state.clienteEntidad||'RAMA');
+    
+    const res=await fetch(API_URL+'/api/extraer-certificado',{
+      method:'POST',body:formData
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({detail:'Error desconocido'}));
+      throw new Error(err.detail||'Error '+res.status);
+    }
+    const data=await res.json();
+    _certCargosDetectados=data.cargos||[];
+    renderCertResultados(_certCargosDetectados);
+  }catch(e){
+    alert('Error procesando certificado: '+e.message);
+  }finally{
+    document.getElementById('cert-loading').style.display='none';
+    document.getElementById('btn-procesar-cert').disabled=false;
+  }
+}
+
+function renderCertResultados(cargos){
+  const cont=document.getElementById('cert-tabla-resultados');
+  const iconos={ok:'✅',revisar:'⚠️',no_encontrado:'🔴'};
+  const colores={ok:'#e8f5e9',revisar:'#fff3e0',no_encontrado:'#fdecea'};
+
+  let html2='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html2+='<thead><tr style="background:var(--g2)"><th style="padding:6px 8px;text-align:left">Estado</th><th>Certificado dice</th><th>App asigna</th><th>Fecha inicio</th><th>Fecha fin</th></tr></thead><tbody>';
+  
+  cargos.forEach((c,i)=>{
+    const ic=iconos[c.estado]||'⚠️';
+    const bg=colores[c.estado]||'#fff3e0';
+    // Selector de cargo de la app para el usuario
+    const optsRAMA=APPD.rama.map(r=>`<option value="${r}" ${c.cargo_app===r?'selected':''}>${r}</option>`).join('');
+    const optsFISC=APPD.fisc.map(r=>`<option value="${r}" ${c.cargo_app===r?'selected':''}>${r}</option>`).join('');
+    const opts='<option value="">-- No usar --</option>'+optsRAMA+optsFISC;
+    
+    html2+=`<tr style="background:${bg};border-bottom:1px solid #ddd">
+      <td style="padding:6px 8px;text-align:center;font-size:14px">${ic}</td>
+      <td style="padding:6px 8px;font-size:11px">${c.cargo_certificado}</td>
+      <td style="padding:4px 6px">
+        <select onchange="_certCargosDetectados[${i}].cargo_app=this.value" 
+          style="width:100%;font-size:11px;padding:3px">
+          ${opts}
+        </select>
+      </td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${c.fecha_inicio||'—'}</td>
+      <td style="padding:6px 8px;font-size:11px;white-space:nowrap">${c.fecha_fin||'—'}</td>
+    </tr>`;
+  });
+  
+  html2+='</tbody></table>';
+  html2+=`<p style="font-size:11px;color:var(--tx2);margin-top:8px">
+    ${cargos.length} cargos detectados · 
+    ${cargos.filter(c=>c.estado==='ok').length} asignados automáticamente · 
+    ${cargos.filter(c=>c.estado==='revisar').length} para revisar · 
+    ${cargos.filter(c=>c.estado==='no_encontrado').length} no encontrados
+  </p>`;
+  
+  cont.innerHTML=html2;
+  document.getElementById('cert-resultados').style.display='block';
+}
+
+function aplicarCargosLxM(){
+  if(!_certCargosDetectados.length){alert('No hay cargos para aplicar');return;}
+  
+  let aplicados=0, omitidos=0;
+  
+  _certCargosDetectados.forEach(c=>{
+    if(!c.cargo_app||!c.fecha_inicio) return;
+    
+    // Parsear fechas DD/MM/YYYY
+    const parseFecha=(s)=>{
+      if(!s) return null;
+      const p=s.split('/');
+      if(p.length!==3) return null;
+      return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+    };
+    
+    const fIni=parseFecha(c.fecha_inicio);
+    const fFin=parseFecha(c.fecha_fin)||new Date();
+    if(!fIni){omitidos++;return;}
+    
+    // Detectar entidad del cargo
+    const entidad=APPD.rama.includes(c.cargo_app)?'RAMA':'FISCALÍA';
+    
+    // Iterar mes a mes
+    let cur=new Date(fIni.getFullYear(),fIni.getMonth(),1);
+    const fin=new Date(fFin.getFullYear(),fFin.getMonth(),1);
+    
+    while(cur<=fin){
+      const año=cur.getFullYear().toString();
+      const mes=MESES[cur.getMonth()];
+      
+      if(!state.años.includes(parseInt(año))){cur.setMonth(cur.getMonth()+1);continue;}
+      if(!state.lxm[año]) state.lxm[año]={};
+      if(!state.lxm[año][mes]) state.lxm[año][mes]=[];
+      
+      // Calcular días del mes (del inicio al fin dentro del mes)
+      const inicioMes=new Date(cur.getFullYear(),cur.getMonth(),1);
+      const finMes=new Date(cur.getFullYear(),cur.getMonth()+1,0);
+      const desdeDia=(cur.getFullYear()===fIni.getFullYear()&&cur.getMonth()===fIni.getMonth())?fIni.getDate():1;
+      const hastaDia=(cur.getFullYear()===fFin.getFullYear()&&cur.getMonth()===fFin.getMonth())?fFin.getDate():finMes.getDate();
+      const dias=Math.max(1,hastaDia-desdeDia+1);
+      
+      // Verificar si ya existe el cargo en ese mes
+      const existe=state.lxm[año][mes].find(f=>f.cargo===c.cargo_app&&f.entidad===entidad);
+      if(!existe){
+        state.lxm[año][mes].push({entidad,cargo:c.cargo_app,dias});
+        aplicados++;
+      }
+      
+      cur.setMonth(cur.getMonth()+1);
+    }
+  });
+  
+  // Reconstruir UI del LxM
+  buildLxM();
+  autoGuardarLocal();
+  cerrarModalCert();
+  alert(`✅ Aplicado: ${aplicados} entradas en el Liquidador por Mes.`+(omitidos>0?`\n⚠️ ${omitidos} cargos omitidos (sin fecha o sin cargo seleccionado).`:''));
+}
+
 init();
 _cargarCargosLocal();
 _sincronizarCargosAPI();
@@ -2812,6 +3010,75 @@ checkSession();
 initExtras();
 restaurarSesionLocal();
 </script>
+
+<!-- ═══ MODAL CERTIFICADO ═══ -->
+<div id="modal-cert" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.6);z-index:8000;align-items:center;justify-content:center">
+  <div style="background:var(--bg);border-radius:14px;padding:28px;width:95%;max-width:700px;
+    max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h3 style="margin:0;color:var(--tx1)">📄 Cargar certificado de cargos</h3>
+      <button onclick="cerrarModalCert()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--tx2)">✕</button>
+    </div>
+
+    <div class="info-box" style="margin-bottom:16px">
+      ⚠️ Antes de continuar verifique que ha ingresado: <strong>NIP, Nombre, Entidad, Ejecutoria y Turno de pago</strong>. 
+      Claude extraerá únicamente los <strong>cargos y fechas</strong> del certificado.
+    </div>
+
+    <div id="cert-upload-area" style="border:2px dashed var(--az);border-radius:10px;
+      padding:30px;text-align:center;cursor:pointer;margin-bottom:16px"
+      onclick="document.getElementById('cert-file-input').click()"
+      ondragover="event.preventDefault()"
+      ondrop="onCertDrop(event)">
+      <div style="font-size:36px;margin-bottom:8px">📄</div>
+      <p style="color:var(--tx2);margin:0">Haga clic o arrastre el PDF aquí</p>
+      <p style="color:var(--tx2);font-size:12px;margin:4px 0 0">Solo PDF · Máximo 10MB</p>
+      <input type="file" id="cert-file-input" accept=".pdf" style="display:none" onchange="onCertFileSelect(event)">
+    </div>
+
+    <div id="cert-archivo-sel" style="display:none;background:var(--g1);border-radius:8px;
+      padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--tx1)">
+      📄 <span id="cert-nombre-archivo"></span>
+      <button onclick="limpiarCertFile()" style="float:right;background:none;border:none;cursor:pointer;color:var(--tx2)">✕</button>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button class="btn btn-s" onclick="procesarCertificado()" id="btn-procesar-cert" style="flex:1" disabled>
+        🤖 Extraer con Claude
+      </button>
+      <button class="btn btn-o" onclick="cerrarModalCert()">Cancelar</button>
+    </div>
+
+    <!-- Resultados -->
+    <div id="cert-resultados" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h4 style="margin:0">Cargos detectados</h4>
+        <div style="font-size:12px;color:var(--tx2)">
+          <span style="color:#2e7d32">✅ Asignado</span> &nbsp;
+          <span style="color:#e65100">⚠️ Revisar</span> &nbsp;
+          <span style="color:#c62828">🔴 No encontrado</span>
+        </div>
+      </div>
+      <div id="cert-tabla-resultados"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn btn-s" onclick="aplicarCargosLxM()" style="flex:1">
+          ✅ Aplicar al Liquidador por Mes
+        </button>
+        <button class="btn btn-o" onclick="cerrarModalCert()">Cerrar</button>
+      </div>
+    </div>
+
+    <div id="cert-loading" style="display:none;text-align:center;padding:30px">
+      <div style="font-size:36px;margin-bottom:12px">🤖</div>
+      <p style="color:var(--tx2)">Claude está analizando el certificado...</p>
+      <p style="color:var(--tx2);font-size:12px">Esto puede tomar unos segundos</p>
+    </div>
+
+  </div>
+</div>
+
 </body>
 </html
 <!-- ═══ TAB 8: HISTORIAL ═══ -->
