@@ -245,8 +245,11 @@ def supa_config():
 
 @app.post("/api/extraer-certificado")
 async def extraer_certificado(
+    request: Request,
     file: UploadFile = File(...),
-    entidad: str = Form(default="RAMA")
+    entidad: str = Form(default="RAMA"),
+    fecha_prescripcion: str = Form(default=None),
+    fecha_ejecutoria: str = Form(default=None)
 ):
     """Extrae cargos y fechas de un certificado PDF usando Claude."""
     try:
@@ -262,7 +265,7 @@ async def extraer_certificado(
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from cert_extractor import extraer_cargos_pdf
         
-        resultado = extraer_cargos_pdf(contenido, entidad)
+        resultado = extraer_cargos_pdf(contenido, entidad, fecha_prescripcion, fecha_ejecutoria)
         return resultado
     except HTTPException:
         raise
