@@ -934,6 +934,12 @@ function getSal(ent,cargo,a){
 }
 
 function calcularTodo(){
+  // Leer toggles directamente del DOM antes de calcular
+  const elProp=document.getElementById('g-proporcional');
+  if(elProp) state.proporcional=elProp.checked;
+  const elRes=document.getElementById('g-resolucion');
+  if(elRes) state.resolucion=elRes.checked;
+  console.log('calcularTodo: proporcional=',state.proporcional,'resolucion=',state.resolucion);
   // Recoger filas del LxM
   state.ps={};
   state.cargosUsados=[];
