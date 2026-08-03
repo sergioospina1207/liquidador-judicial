@@ -983,39 +983,83 @@ function calcularTodo(){
       const pS2=dS2?dS2/180:0;
       const p360=dTot?dTot/360:0;
 
-      // ── Liquidación Proporcional: días desde inicio LxM hasta mes de pago ──
-      // Función que cuenta días acumulados de este cargo desde inicio LxM hasta un mes de pago
-      const diasHastaMesPago=(mesPago)=>{
-        if(!state.proporcional) return dTot; // modo normal: días del año
+      // ── Liquidación Proporcional ──────────────────────────
+      // Para cada prestación:
+      // - Si el año está completo (360 días): usa 360
+      // - Si no está completo: cuenta desde el último pago de esa prestación
+      //   en el año anterior hasta el mes de pago del año actual
+      const añoCompleto = dTot >= 360;
+
+      const diasProporcional=(mpKey)=>{
+        if(!state.proporcional) return dTot;
+        if(añoCompleto) return 360; // año completo → 360
+
         const MESES_L=['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                        'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-        // Encontrar el primer año del LxM
-        const añosOrdenados=Object.keys(state.lxm).map(Number).sort((x,y)=>x-y);
-        if(!añosOrdenados.length) return dTot;
-        const primerAño=añosOrdenados[0];
         const añoActual=parseInt(a);
+        const mesPagoActual=getMesPago(String(añoActual),mpKey);
+        const mesPagoIdx=MESES_L.indexOf(mesPagoActual);
+        
+        // Año anterior: buscar el mes de pago de la misma prestación
+        const añoAnt=añoActual-1;
+        const mesPagoAnt=getMesPago(String(añoAnt),mpKey);
+        const mesPagoAntIdx=MESES_L.indexOf(mesPagoAnt);
+
+        // Sumar días de este cargo:
+        // 1) Desde el mes después del pago anterior (año ant) hasta dic del año ant
+        // 2) Desde ene del año actual hasta el mes de pago actual
         let totalDias=0;
-        // Sumar días de este cargo desde el primer año hasta el mes de pago del año actual
-        for(const añoIt of añosOrdenados){
-          const mesLimite=añoIt<añoActual?11:MESES_L.indexOf(mesPago);
-          if(añoIt>añoActual) break;
-          const filasAñoIt=Object.entries(state.lxm[String(añoIt)]||{}).flatMap(([m,fs])=>
-            fs.filter(f=>f.cargo===cargo&&f.entidad===entidad)
-              .map(f=>({mes:m,dias:f.dias,mesIdx:MESES_L.indexOf(m)}))
-          ).filter(f=>f.mesIdx<=mesLimite&&(añoIt<añoActual||f.mesIdx<=MESES_L.indexOf(mesPago)));
-          totalDias+=filasAñoIt.reduce((s,f)=>s+f.dias,0);
+
+        // Días del año anterior (desde el mes siguiente al último pago hasta dic)
+        const lxmAnt=state.lxm[String(añoAnt)]||{};
+        Object.entries(lxmAnt).forEach(([mes,filas])=>{
+          const mesIdx=MESES_L.indexOf(mes);
+          // Solo meses DESPUÉS del último pago del año anterior
+          if(mesIdx > mesPagoAntIdx){
+            filas.filter(f=>f.cargo===cargo&&f.entidad===entidad)
+              .forEach(f=>totalDias+=f.dias);
+          }
+        });
+
+        // Días del año actual hasta el mes de pago
+        const lxmAct=state.lxm[String(añoActual)]||{};
+        Object.entries(lxmAct).forEach(([mes,filas])=>{
+          const mesIdx=MESES_L.indexOf(mes);
+          if(mesIdx <= mesPagoIdx){
+            filas.filter(f=>f.cargo===cargo&&f.entidad===entidad)
+              .forEach(f=>totalDias+=f.dias);
+          }
+        });
+
+        // Si es el primer año del LxM, contar desde el inicio (no desde mes pago ant)
+        const primerAño=Math.min(...Object.keys(state.lxm).map(Number));
+        if(añoActual===primerAño){
+          totalDias=0;
+          // Contar todos los días desde inicio hasta mes de pago actual
+          Object.entries(lxmAct).forEach(([mes,filas])=>{
+            const mesIdx=MESES_L.indexOf(mes);
+            if(mesIdx<=mesPagoIdx){
+              filas.filter(f=>f.cargo===cargo&&f.entidad===entidad)
+                .forEach(f=>totalDias+=f.dias);
+            }
+          });
+          // Más los del año anterior si existe
+          Object.entries(lxmAnt).forEach(([mes,filas])=>{
+            filas.filter(f=>f.cargo===cargo&&f.entidad===entidad)
+              .forEach(f=>totalDias+=f.dias);
+          });
         }
-        return totalDias;
+
+        return Math.min(totalDias, 360);
       };
 
       // Proporciones por prestación según modo
-      const getMesPagoStr=(mpKey)=>{const m=getMesPago(String(a),mpKey);return m==='NO'?'Diciembre':m;};
-      const pPServ =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('primaServ')) /360,1):p360;
-      const pPVac  =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('primaVac'))  /360,1):p360;
-      const pSVac  =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('sueldoVac')) /360,1):p360;
-      const pPNav  =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('primaNov'))  /360,1):p360;
-      const pServ  =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('servicios')) /360,1):p360;
-      if(state.proporcional&&a===state.años[0]) console.log('Proporcional año',a,'cargo',cargo,'pPServ',pPServ,'pPNav',pPNav,'dTot',dTot);
+      const pPServ = diasProporcional('primaServ')/360;
+      const pPVac  = diasProporcional('primaVac')/360;
+      const pSVac  = diasProporcional('sueldoVac')/360;
+      const pPNav  = diasProporcional('primaNov')/360;
+      const pServ  = diasProporcional('servicios')/360;
+      if(state.proporcional) console.log('Proporcional año',a,'cargo',cargo,'añoCompleto',añoCompleto,'pPServ días',Math.round(pPServ*360),'pPNav días',Math.round(pPNav*360));
 
       // s/Bonificación
       const bProdS1=bon*0.5*pS1;
