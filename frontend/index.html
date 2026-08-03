@@ -219,6 +219,10 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
             <label class="sw"><input type="checkbox" id="g-resolucion" onchange="onResolucionChange()"><span class="sl"></span></label>
             <span>Liquidación por resolución de pago</span>
           </div>
+          <div class="sw-row">
+            <label class="sw"><input type="checkbox" id="g-proporcional" onchange="onProporcionalChange()"><span class="sl"></span></label>
+            <span>Liquidación Proporcional</span>
+          </div>
           <div id="g-pct-row" class="hidden fg" style="max-width:180px">
             <label>Porcentaje (%)</label>
             <input type="number" id="g-gastosPct" value="33.33" step="0.01">
@@ -578,6 +582,7 @@ let DB = APPD.data.map(d=>({...d})); // copia mutable
 let state = {
   clienteNIP:'', clienteNombre:'', clienteEntidad:'', clienteCargo:'', clienteEjecutoria:'', clienteTurno:'',
   resolucion:false,
+  proporcional:false,
   honPct:30,
   honIVA:'asume',
   años: [],
@@ -679,6 +684,10 @@ function onGastosChange(){
 
 function onResolucionChange(){
   state.resolucion=document.getElementById('g-resolucion').checked;
+}
+
+function onProporcionalChange(){
+  state.proporcional=document.getElementById('g-proporcional').checked;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -968,17 +977,50 @@ function calcularTodo(){
       const pS2=dS2?dS2/180:0;
       const p360=dTot?dTot/360:0;
 
+      // ── Liquidación Proporcional: días desde inicio LxM hasta mes de pago ──
+      // Función que cuenta días acumulados de este cargo desde inicio LxM hasta un mes de pago
+      const diasHastaMesPago=(mesPago)=>{
+        if(!state.proporcional) return dTot; // modo normal: días del año
+        const MESES_L=['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                       'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        // Encontrar el primer año del LxM
+        const añosOrdenados=Object.keys(state.lxm).map(Number).sort((x,y)=>x-y);
+        if(!añosOrdenados.length) return dTot;
+        const primerAño=añosOrdenados[0];
+        const añoActual=parseInt(a);
+        let totalDias=0;
+        // Sumar días de este cargo desde el primer año hasta el mes de pago del año actual
+        for(const añoIt of añosOrdenados){
+          const mesLimite=añoIt<añoActual?11:MESES_L.indexOf(mesPago);
+          if(añoIt>añoActual) break;
+          const filasAñoIt=Object.entries(state.lxm[String(añoIt)]||{}).flatMap(([m,fs])=>
+            fs.filter(f=>f.cargo===cargo&&f.entidad===entidad)
+              .map(f=>({mes:m,dias:f.dias,mesIdx:MESES_L.indexOf(m)}))
+          ).filter(f=>f.mesIdx<=mesLimite&&(añoIt<añoActual||f.mesIdx<=MESES_L.indexOf(mesPago)));
+          totalDias+=filasAñoIt.reduce((s,f)=>s+f.dias,0);
+        }
+        return totalDias;
+      };
+
+      // Proporciones por prestación según modo
+      const getMesPagoStr=(mpKey)=>getMesPago(String(a),mpKey);
+      const pPServ =state.proporcional?(diasHastaMesPago(getMesPagoStr('primaServ'))  /360):p360;
+      const pPVac  =state.proporcional?(diasHastaMesPago(getMesPagoStr('primaVac'))   /360):p360;
+      const pSVac  =state.proporcional?(diasHastaMesPago(getMesPagoStr('sueldoVac'))  /360):p360;
+      const pPNav  =state.proporcional?(diasHastaMesPago(getMesPagoStr('primaNov'))   /360):p360;
+      const pServ  =state.proporcional?(diasHastaMesPago(getMesPagoStr('servicios'))  /360):p360;
+
       // s/Bonificación
       const bProdS1=bon*0.5*pS1;
       const bProdS2=bon*0.5*pS2;
       const bProd=bProdS1+bProdS2;
       const bServ=bon*0.35;
-      const bPServ=bon/30*15*p360;
+      const bPServ=bon/30*15*(state.proporcional?pPServ:p360);
       const bBVac=bon+bServ/12+bPServ/12+bProd/12;
-      const bPVac=bBVac/30*15*p360;
+      const bPVac=bBVac/30*15*(state.proporcional?pPVac:p360);
       const bSVac10=bBVac/10;
       const bBNav=bBVac+bPVac/12;
-      const bPNav=bBNav*p360;
+      const bPNav=bBNav*(state.proporcional?pPNav:p360);
       const bBCes=bon+bServ/12+bPServ/12+bProd/12+bPVac/12+bPNav/12;
       const bCes=bBCes/360*dTot;
       const bInt=bCes*0.12;
@@ -988,12 +1030,12 @@ function calcularTodo(){
       const sProdS2=sal*0.5*pS2;
       const sProd=sProdS1+sProdS2;
       const sServ=sal*0.35;
-      const sPServ=sal/30*15*p360;
+      const sPServ=sal/30*15*(state.proporcional?pPServ:p360);
       const sBVac=sal+sServ/12+sPServ/12+sProd/12;
-      const sPVac=sBVac/30*15*p360;
+      const sPVac=sBVac/30*15*(state.proporcional?pPVac:p360);
       const sSVac10=sBVac/10;
       const sBNav=sBVac+sPVac/12;
-      const sPNav=sBNav*p360;
+      const sPNav=sBNav*(state.proporcional?pPNav:p360);
       const sBCes=sal+sServ/12+sPServ/12+sProd/12+sPVac/12+sPNav/12;
       const sCes=sBCes/360*dTot;
       const sInt=sCes*0.12;
@@ -1541,7 +1583,7 @@ function _marcarCambio(){
 }
 async function _guardarHistorial(totales){
   const ahora=new Date();
-  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clientePrescripcion:state.clientePrescripcion||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',años:state.años,lxm:state.lxm,mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false,honPct:state.honPct||30,honIVA:state.honIVA||'asume'});
+  const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clientePrescripcion:state.clientePrescripcion||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',años:state.años,lxm:state.lxm,mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false,proporcional:state.proporcional||false,honPct:state.honPct||30,honIVA:state.honIVA||'asume'});
   const entrada={
     id:Date.now(),
     fecha:ahora.toLocaleDateString('es-CO')+' '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
@@ -1702,7 +1744,7 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
       clientePrescripcion:s.clientePrescripcion||'', clienteEjecutoria:s.clienteEjecutoria||'', clienteTurno:s.clienteTurno||'',
       años:s.años||[], lxm:s.lxm||{},
       mesEjec:s.mesEjec||'Mayo', añoEjec:s.añoEjec||2025,
-      diasVac:s.diasVac||22, gastosRep:s.gastosRep||false, gastosPct:s.gastosPct||33.33, resolucion:s.resolucion||false,honPct:s.honPct||30,honIVA:s.honIVA||'asume'
+      diasVac:s.diasVac||22, gastosRep:s.gastosRep||false, gastosPct:s.gastosPct||33.33, resolucion:s.resolucion||false,proporcional:s.proporcional||false,honPct:s.honPct||30,honIVA:s.honIVA||'asume'
     });
     // Restaurar UI
     const n=document.getElementById('cli-nip');if(n)n.value=state.clienteNIP;
@@ -1717,6 +1759,7 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
     const honPctEl=document.getElementById('hon-pct');if(honPctEl)honPctEl.value=state.honPct||30;
     const honIVAEl=document.getElementById(state.honIVA==='noasume'?'hon-noasume':'hon-asume');if(honIVAEl)honIVAEl.checked=true;
     const rEl=document.getElementById('g-resolucion');if(rEl){rEl.checked=state.resolucion||false;onResolucionChange();}
+    const prEl=document.getElementById('g-proporcional');if(prEl){prEl.checked=state.proporcional||false;}
     // Marcar años
     document.querySelectorAll('[id^="año-btn-"]').forEach(b=>{b.classList.remove('btn-p');b.classList.add('btn-o');});
     state.años.forEach(a=>{const b=document.getElementById('año-btn-'+a);if(b){b.classList.remove('btn-o');b.classList.add('btn-p');}});
