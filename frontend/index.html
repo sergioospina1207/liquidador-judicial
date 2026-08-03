@@ -1003,12 +1003,13 @@ function calcularTodo(){
       };
 
       // Proporciones por prestación según modo
-      const getMesPagoStr=(mpKey)=>getMesPago(String(a),mpKey);
-      const pPServ =state.proporcional?(diasHastaMesPago(getMesPagoStr('primaServ'))  /360):p360;
-      const pPVac  =state.proporcional?(diasHastaMesPago(getMesPagoStr('primaVac'))   /360):p360;
-      const pSVac  =state.proporcional?(diasHastaMesPago(getMesPagoStr('sueldoVac'))  /360):p360;
-      const pPNav  =state.proporcional?(diasHastaMesPago(getMesPagoStr('primaNov'))   /360):p360;
-      const pServ  =state.proporcional?(diasHastaMesPago(getMesPagoStr('servicios'))  /360):p360;
+      const getMesPagoStr=(mpKey)=>{const m=getMesPago(String(a),mpKey);return m==='NO'?'Diciembre':m;};
+      const pPServ =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('primaServ')) /360,1):p360;
+      const pPVac  =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('primaVac'))  /360,1):p360;
+      const pSVac  =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('sueldoVac')) /360,1):p360;
+      const pPNav  =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('primaNov'))  /360,1):p360;
+      const pServ  =state.proporcional?Math.min(diasHastaMesPago(getMesPagoStr('servicios')) /360,1):p360;
+      if(state.proporcional&&a===state.años[0]) console.log('Proporcional año',a,'cargo',cargo,'pPServ',pPServ,'pPNav',pPNav,'dTot',dTot);
 
       // s/Bonificación
       const bProdS1=bon*0.5*pS1;
