@@ -274,6 +274,88 @@ async def extraer_certificado(
         import traceback; traceback.print_exc()
         raise HTTPException(500, f"Error procesando certificado: {str(e)}")
 
+
+# ── Carpetas ─────────────────────────────────────────────
+class CarpetaEntry(BaseModel):
+    id: str
+    nombre: str
+    fecha: Optional[str] = None
+
+class CarpetaAsigEntry(BaseModel):
+    hist_id: str
+    carpeta_id: str
+
+class HistCatEntry(BaseModel):
+    hist_id: str
+    categoria: str
+
+@app.get("/api/carpetas")
+def get_carpetas():
+    try:
+        res = get_db().table("carpetas").select("*").order("created_at").execute()
+        return {"data": res.data}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.post("/api/carpetas")
+def save_carpeta(c: CarpetaEntry):
+    try:
+        get_db().table("carpetas").upsert(
+            {"id": c.id, "nombre": c.nombre, "fecha": c.fecha},
+            on_conflict="id"
+        ).execute()
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.delete("/api/carpetas/{id}")
+def delete_carpeta(id: str):
+    try:
+        db = get_db()
+        db.table("carpetas").delete().eq("id", id).execute()
+        db.table("carpeta_asig").delete().eq("carpeta_id", id).execute()
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.get("/api/carpeta-asig")
+def get_carpeta_asig():
+    try:
+        res = get_db().table("carpeta_asig").select("*").execute()
+        return {"data": res.data}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.post("/api/carpeta-asig")
+def save_carpeta_asig(a: CarpetaAsigEntry):
+    try:
+        get_db().table("carpeta_asig").upsert(
+            {"hist_id": a.hist_id, "carpeta_id": a.carpeta_id},
+            on_conflict="hist_id"
+        ).execute()
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.get("/api/hist-categoria")
+def get_hist_categoria():
+    try:
+        res = get_db().table("hist_categorias").select("*").execute()
+        return {"data": res.data}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.post("/api/hist-categoria")
+def save_hist_categoria(c: HistCatEntry):
+    try:
+        get_db().table("hist_categorias").upsert(
+            {"hist_id": c.hist_id, "categoria": c.categoria},
+            on_conflict="hist_id"
+        ).execute()
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
 @app.post("/api/exportar-excel")
 async def exportar_excel(request: Request):
     try:
