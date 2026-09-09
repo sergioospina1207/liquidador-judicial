@@ -76,7 +76,7 @@ def health():
 def get_historial(nip: Optional[str] = None):
     try:
         db = get_db()
-        q = db.table("historial").select("*").order("created_at", desc=True).limit(100)
+        q = db.table("historial").select("*").order("created_at", desc=True).limit(10000)
         if nip:
             q = q.eq("nip", nip)
         res = q.execute()
