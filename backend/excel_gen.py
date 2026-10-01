@@ -58,13 +58,14 @@ def fmt_fecha(s):
     return s
 
 def generar_excel(data: dict) -> bytes:
-    cliente   = data.get('cliente', {})
-    col_hdrs  = data.get('colHeaders', [])
-    filas     = data.get('filas', [])
-    totales   = data.get('totales', {})
-    resumen   = data.get('resumen', {})
-    tramos    = data.get('tramosData', [])
-    intParams = data.get('intParams', {})
+    cliente    = data.get('cliente', {})
+    col_hdrs   = data.get('colHeaders', [])
+    filas      = data.get('filas', [])
+    totales    = data.get('totales', {})
+    resumen    = data.get('resumen', {})
+    tramos     = data.get('tramosData', [])
+    intParams  = data.get('intParams', {})
+    ces_por_año = data.get('cesPorAño', {})
 
     N = len(col_hdrs)
     TOTAL_COLS = 2 + N + 7  # Período+Días+N prest+BRUTO+IBC+Ded+NETO+IpcIni+Factor+nIdx
@@ -218,6 +219,114 @@ def generar_excel(data: dict) -> bytes:
         fr(ws1,cr,RC1+1,TOTAL_COLS-1,bgr,THIN)
         sc(ws1,cr,TOTAL_COLS,val,bold=bld,bg=bgr,fg=fgr,size=8,h='right',nf=NUM,b=THIN)
 
+
+    # ══ SECCIÓN RESOLUCIÓN DE PAGO: CESANTÍAS POR AÑO + DESGLOSE INTERESES ══
+    if res.get('modo') == 'resolucion':
+        VD_MED  = '1A7A4E'
+        VD_CLR2 = 'D1FAE5'
+        AZ_CLR2 = 'DBEAFE'
+        AZ_MED2 = '3B82F6'
+        MINT    = 'CCFBF1'
+
+        cr += 2
+
+        # ── Bloque 1: Cesantías e intereses por año ──
+        if ces_por_año:
+            ws1.row_dimensions[cr].height = 14
+            ws1.merge_cells(f'A{cr}:{last_col}{cr}')
+            sc(ws1,cr,1,'CESANTÍAS E INTERESES DE CESANTÍAS POR AÑO (IPC feb. año siguiente)',
+               bold=True,bg=VD_MED,fg=BL,size=9,h='center',b=MED)
+            cr += 1
+
+            # Cabecera
+            ces_hdrs = ['AÑO','CES. NETO','CES. INDEXADO','INT.CES. NETO','INT.CES. INDEXADO','TOTAL INDEXADO']
+            ces_bgs  = [AZ_OSC, VD_CLR2, VD_CLR2, MINT, MINT, VD_MED]
+            ces_fgs  = [BL,     VD_MED,  VD_MED,  '0f766e','0f766e', BL]
+            ws1.row_dimensions[cr].height = 13
+            for ci,(h,bg,fg) in enumerate(zip(ces_hdrs,ces_bgs,ces_fgs),1):
+                sc(ws1,cr,ci,h,bold=True,bg=bg,fg=fg,size=8,h='center',b=THIN)
+            cr += 1
+
+            tot_cn=tot_ci=tot_in=tot_ii=0
+            for i,(año,d) in enumerate(sorted(ces_por_año.items(), key=lambda x:int(x[0]))):
+                bg_row = GR_CLR if i%2==0 else BL
+                ces_n  = round(d.get('cesNeto',0))
+                ces_i  = round(d.get('cesIdx',0))
+                int_n  = round(d.get('intNeto',0))
+                int_i  = round(d.get('intIdx',0))
+                tot_idx= ces_i + int_i
+                tot_cn+=ces_n; tot_ci+=ces_i; tot_in+=int_n; tot_ii+=int_i
+                ws1.row_dimensions[cr].height = 11
+                sc(ws1,cr,1,año,bold=True,bg=bg_row,fg=VD_MED,size=8,h='center',b=THIN)
+                sc(ws1,cr,2,ces_n,bg=bg_row,size=7,h='right',nf=NUM,b=THIN)
+                sc(ws1,cr,3,ces_i,bold=True,bg=VD_CLR2,fg=VD_MED,size=7,h='right',nf=NUM,b=THIN)
+                sc(ws1,cr,4,int_n,bg=bg_row,size=7,h='right',nf=NUM,b=THIN)
+                sc(ws1,cr,5,int_i,bold=True,bg=MINT,fg='0f766e',size=7,h='right',nf=NUM,b=THIN)
+                sc(ws1,cr,6,tot_idx,bold=True,bg=VD_MED,fg=BL,size=7,h='right',nf=NUM,b=THIN)
+                cr += 1
+
+            # Fila totales cesantías
+            ws1.row_dimensions[cr].height = 13
+            sc(ws1,cr,1,'TOTAL',bold=True,bg=VD_MED,fg=BL,size=8,h='center',b=MED)
+            sc(ws1,cr,2,tot_cn,bold=True,bg=VD_MED,fg=BL,size=7,h='right',nf=NUM,b=MED)
+            sc(ws1,cr,3,tot_ci,bold=True,bg=VD_MED,fg=BL,size=7,h='right',nf=NUM,b=MED)
+            sc(ws1,cr,4,tot_in,bold=True,bg=VD_MED,fg=BL,size=7,h='right',nf=NUM,b=MED)
+            sc(ws1,cr,5,tot_ii,bold=True,bg=VD_MED,fg=BL,size=7,h='right',nf=NUM,b=MED)
+            sc(ws1,cr,6,tot_ci+tot_ii,bold=True,bg=VD_MED,fg=BL,size=7,h='right',nf=NUM,b=MED)
+            cr += 2
+
+        # ── Bloque 2: Desglose intereses por capital ──
+        ws1.row_dimensions[cr].height = 14
+        ws1.merge_cells(f'A{cr}:{last_col}{cr}')
+        sc(ws1,cr,1,'RESUMEN DE INTERESES POR CAPITAL (Art. 177 CPACA – Resolución de Pago)',
+           bold=True,bg=AZ_OSC,fg=BL,size=9,h='center',b=MED)
+        cr += 1
+
+        # Cabecera 5 columnas
+        int_hdrs = ['CONCEPTO','CAPITAL INDEXADO','INT. DTF','INT. BANCARIOS / CORRIENTES','TOTAL']
+        int_bgs  = [AZ_OSC, AZ_CLR2, AZ_CLR2, AZ_CLR2, AZ_MED2]
+        int_fgs  = [BL,    AZ_OSC,  AZ_OSC,  AZ_OSC,  BL]
+        ws1.row_dimensions[cr].height = 13
+        for ci,(h,bg,fg) in enumerate(zip(int_hdrs,int_bgs,int_fgs),1):
+            sc(ws1,cr,ci,h,bold=True,bg=bg,fg=fg,size=8,h='center' if ci>1 else 'left',b=THIN)
+        cr += 1
+
+        cap_p  = res.get('capPrest',0)
+        dtf_p  = res.get('intPrestDTF',0)
+        ban_p  = res.get('intPrestBanc',0)
+        tot_p  = res.get('totalPrest',0)
+
+        cap_c  = res.get('capCesTot',0)
+        dtf_c  = res.get('intCesDTF',0)
+        ban_c  = res.get('intCesBanc',0)
+        tot_c  = res.get('totalCes',0)
+
+        # Fila prestaciones (azul suave)
+        ws1.row_dimensions[cr].height = 12
+        sc(ws1,cr,1,'Prestaciones s/bonificación',bg=AZ_CLR2,fg=AZ_OSC,size=8,b=THIN)
+        sc(ws1,cr,2,cap_p,bg=AZ_CLR2,fg=AZ_OSC,bold=True,size=8,h='right',nf=NUM,b=THIN)
+        sc(ws1,cr,3,dtf_p,bg=AZ_CLR2,fg='1d4ed8',size=8,h='right',nf=NUM,b=THIN)
+        sc(ws1,cr,4,ban_p,bg=AZ_CLR2,fg='1d4ed8',size=8,h='right',nf=NUM,b=THIN)
+        sc(ws1,cr,5,tot_p,bg=AZ_MED2,fg=BL,bold=True,size=8,h='right',nf=NUM,b=THIN)
+        cr += 1
+
+        # Fila cesantías (verde suave)
+        ws1.row_dimensions[cr].height = 12
+        sc(ws1,cr,1,'Cesantías + Int. Cesantías',bg=VD_CLR2,fg=VD_MED,size=8,b=THIN)
+        sc(ws1,cr,2,cap_c,bg=VD_CLR2,fg=VD_MED,bold=True,size=8,h='right',nf=NUM,b=THIN)
+        sc(ws1,cr,3,dtf_c,bg=VD_CLR2,fg='065f46',size=8,h='right',nf=NUM,b=THIN)
+        sc(ws1,cr,4,ban_c,bg=VD_CLR2,fg='065f46',size=8,h='right',nf=NUM,b=THIN)
+        sc(ws1,cr,5,tot_c,bg=VD_MED,fg=BL,bold=True,size=8,h='right',nf=NUM,b=THIN)
+        cr += 1
+
+        # Fila TOTAL (azul oscuro)
+        ws1.row_dimensions[cr].height = 13
+        sc(ws1,cr,1,'TOTAL',bold=True,bg=AZ_OSC,fg=BL,size=8,b=MED)
+        sc(ws1,cr,2,cap_p+cap_c,bold=True,bg=AZ_OSC,fg=BL,size=8,h='right',nf=NUM,b=MED)
+        sc(ws1,cr,3,dtf_p+dtf_c,bold=True,bg=AZ_OSC,fg=BL,size=8,h='right',nf=NUM,b=MED)
+        sc(ws1,cr,4,ban_p+ban_c,bold=True,bg=AZ_OSC,fg=BL,size=8,h='right',nf=NUM,b=MED)
+        sc(ws1,cr,5,tot_p+tot_c,bold=True,bg=VD_OSC,fg=BL,size=8,h='right',nf=NUM,b=MED)
+        cr += 2
 
     # ── Pie de página disclaimer ──────────────────────────
     disclaimer = "Los valores presentados en este documento son el resultado de un proceso de liquidación con base en la información suministrada y las tasas vigentes a la fecha de corte. No constituyen reconocimiento ni obligación de pago. El valor final estará sujeto a la forma en que cada entidad realice la liquidación al momento de la resolución de pago."
