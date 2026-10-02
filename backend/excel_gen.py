@@ -198,6 +198,7 @@ def generar_excel(data: dict) -> bytes:
 
     # ══ CESANTÍAS POR AÑO (siempre) + DESGLOSE INTERESES ══
     if True:
+        res = resumen   # alias para uso en desglose y resumen general
         VD_MED  = '1A7A4E'
         VD_CLR2 = 'D1FAE5'
         AZ_CLR2 = 'DBEAFE'
@@ -305,7 +306,6 @@ def generar_excel(data: dict) -> bytes:
         cr += 2
 
     # ══ RESUMEN GENERAL DE LIQUIDACIÓN — siempre al final ══
-    res = resumen
     cr += 2; ws1.row_dimensions[cr].height = 14
     ws1.merge_cells(f'A{cr}:{last_col}{cr}')
     sc(ws1,cr,1,'RESUMEN GENERAL DE LIQUIDACIÓN',bold=True,bg=AZ_OSC,fg=BL,size=9,h='center',b=MED)
