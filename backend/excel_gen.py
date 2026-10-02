@@ -68,14 +68,18 @@ def generar_excel(data: dict) -> bytes:
     ces_por_año = data.get('cesPorAño', {})
 
     # Filtrar cesantías e intereses de cesantías del cuadro principal
-    EXCLUIR = {'cesantias', 'intereses', 'cesantías', 'intereses de cesantías',
-               'cesantias.', 'int. cesantías', 'int.cesantias'}
+    EXCLUIR = {
+        'cesantias', 'cesantías',
+        'intereses', 'intereses cesantías', 'intereses cesantias',
+        'int. cesantías', 'int. cesantias', 'int.cesantías', 'int.cesantias',
+        'intereses de cesantías', 'intereses de cesantias',
+    }
     col_idx_keep = [i for i,h in enumerate(col_hdrs)
                     if h.lower().strip() not in EXCLUIR]
     col_hdrs = [col_hdrs[i] for i in col_idx_keep]
     filas = [{**f, 'cols': [f['cols'][i] for i in col_idx_keep
-                             if i < len(f['cols'])]}
-             if f.get('tipo') != 'sep' else f for f in filas]
+                             if i < len(f.get('cols',[]))]}
+             if f.get('tipo') != 'sep' and 'cols' in f else f for f in filas]
     if totales.get('cols'):
         totales = {**totales, 'cols': [totales['cols'][i] for i in col_idx_keep
                                         if i < len(totales['cols'])]}
