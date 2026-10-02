@@ -67,6 +67,19 @@ def generar_excel(data: dict) -> bytes:
     intParams  = data.get('intParams', {})
     ces_por_año = data.get('cesPorAño', {})
 
+    # Filtrar cesantías e intereses de cesantías del cuadro principal
+    EXCLUIR = {'cesantias', 'intereses', 'cesantías', 'intereses de cesantías',
+               'cesantias.', 'int. cesantías', 'int.cesantias'}
+    col_idx_keep = [i for i,h in enumerate(col_hdrs)
+                    if h.lower().strip() not in EXCLUIR]
+    col_hdrs = [col_hdrs[i] for i in col_idx_keep]
+    filas = [{**f, 'cols': [f['cols'][i] for i in col_idx_keep
+                             if i < len(f['cols'])]}
+             if f.get('tipo') != 'sep' else f for f in filas]
+    if totales.get('cols'):
+        totales = {**totales, 'cols': [totales['cols'][i] for i in col_idx_keep
+                                        if i < len(totales['cols'])]}
+
     N = len(col_hdrs)
     TOTAL_COLS = 2 + N + 7  # Período+Días+N prest+BRUTO+IBC+Ded+NETO+IpcIni+Factor+nIdx
 
@@ -179,88 +192,6 @@ def generar_excel(data: dict) -> bytes:
     dif = totales.get('nIdx',0) - totales.get('neto',0)
     sc(ws1,cr,TOTAL_COLS,dif,bold=True,bg=VD_OSC,fg=BL,size=8,h='right',nf=NUM,b=THIN)
 
-    # ══ RESUMEN GENERAL — tabla 5 columnas (siempre, ambos modos) ══
-    cr += 2; ws1.row_dimensions[cr].height = 14
-    ws1.merge_cells(f'A{cr}:{last_col}{cr}')
-    sc(ws1,cr,1,'RESUMEN GENERAL DE LIQUIDACIÓN',bold=True,bg=AZ_OSC,fg=BL,size=9,h='center',b=MED)
-    cr += 1
-
-    # Cabecera 5 cols
-    res = resumen
-    rg_hdrs = ['CONCEPTO','VALOR NOMINAL','+ INDEXACIÓN','+ INTERESES','= TOTAL']
-    rg_bgs  = [AZ_OSC,'2d4a6f','2d4a6f','2d4a6f','1a3a5c']
-    rg_fgs  = [BL, BL, 'bfdbfe', 'bfdbfe', BL]
-    ws1.row_dimensions[cr].height = 13
-    for ci,(h,bg,fg) in enumerate(zip(rg_hdrs,rg_bgs,rg_fgs),1):
-        sc(ws1,cr,ci,h,bold=True,bg=bg,fg=fg,size=8,
-           h='left' if ci==1 else 'right',b=THIN)
-    cr += 1
-
-    # Fila Prestaciones Sociales
-    nom_p  = res.get('nomPrest',0)
-    idx_p  = res.get('idxPrest', res.get('capPrest',0) - nom_p)
-    int_p  = res.get('intPrestDTF',0) + res.get('intPrestBanc',0)
-    tot_p  = res.get('totalPrest',0)
-    ws1.row_dimensions[cr].height = 12
-    sc(ws1,cr,1,'Prestaciones Sociales',bg='eff6ff',fg='1e40af',bold=True,size=8,b=THIN)
-    sc(ws1,cr,2,nom_p,bg='eff6ff',fg='374151',size=8,h='right',nf=NUM,b=THIN)
-    sc(ws1,cr,3,idx_p,bg='dbeafe',fg='1d4ed8',size=8,h='right',nf=NUM,b=THIN)
-    sc(ws1,cr,4,int_p,bg='dbeafe',fg='1d4ed8',size=8,h='right',nf=NUM,b=THIN)
-    sc(ws1,cr,5,tot_p,bg='1e40af',fg=BL,bold=True,size=8,h='right',nf=NUM,b=THIN)
-    cr += 1
-
-    # Fila Cesantías + Int. Cesantías
-    nom_c  = res.get('nomCes',0)
-    idx_c  = res.get('idxCes', res.get('capCesTot',0) - nom_c)
-    int_c  = res.get('intCesDTF',0) + res.get('intCesBanc',0)
-    tot_c  = res.get('totalCes',0)
-    ws1.row_dimensions[cr].height = 12
-    sc(ws1,cr,1,'Cesantías + Int. Cesantías',bg='ecfdf5',fg='065f46',bold=True,size=8,b=THIN)
-    sc(ws1,cr,2,nom_c,bg='ecfdf5',fg='374151',size=8,h='right',nf=NUM,b=THIN)
-    sc(ws1,cr,3,idx_c,bg='d1fae5',fg='059669',size=8,h='right',nf=NUM,b=THIN)
-    sc(ws1,cr,4,int_c,bg='d1fae5',fg='059669',size=8,h='right',nf=NUM,b=THIN)
-    sc(ws1,cr,5,tot_c,bg='065f46',fg=BL,bold=True,size=8,h='right',nf=NUM,b=THIN)
-    cr += 1
-
-    # Aportes empleador (solo resolución)
-    if res.get('modo')=='resolucion' and res.get('baseRes',0)>0:
-        pension_v = res.get('pension',0); salud_v = res.get('salud',0)
-        ws1.row_dimensions[cr].height = 11
-        ap_lbl = f"Aportes Empleador — Pensión 12%: ${pension_v:,} | Salud 8.5%: ${salud_v:,}"
-        ws1.merge_cells(f'A{cr}:D{cr}')
-        sc(ws1,cr,1,ap_lbl,bg=GR_CLR,fg='475569',size=7,b=THIN)
-        fr(ws1,cr,2,4,GR_CLR,THIN)
-        sc(ws1,cr,5,pension_v+salud_v,bg=GR_CLR,fg='475569',size=8,h='right',nf=NUM,b=THIN)
-        cr += 1
-
-    # Total liquidación
-    tot_gen = res.get('totalFin',0)
-    ws1.row_dimensions[cr].height = 14
-    ws1.merge_cells(f'A{cr}:D{cr}')
-    sc(ws1,cr,1,'TOTAL LIQUIDACIÓN',bold=True,bg='1e293b',fg=BL,size=9,b=MED)
-    fr(ws1,cr,2,4,'1e293b',MED)
-    sc(ws1,cr,5,tot_gen,bold=True,bg='0f172a',fg=BL,size=9,h='right',nf=NUM,b=MED)
-    cr += 1
-
-    # Honorarios
-    hon_pct = res.get('honPct',30)
-    hon_v   = res.get('honV',0) + res.get('honIvaV',0)
-    hon_lbl = f"Honorarios {hon_pct}%" + (' + IVA 19%' if res.get('honIVA')=='noasume' else ' (IVA incluido)')
-    ws1.row_dimensions[cr].height = 12
-    ws1.merge_cells(f'A{cr}:D{cr}')
-    sc(ws1,cr,1,hon_lbl,bold=False,bg=AMA,fg='92400e',size=8,b=THIN)
-    fr(ws1,cr,2,4,AMA,THIN)
-    sc(ws1,cr,5,hon_v,bg=AMA,fg='92400e',bold=True,size=8,h='right',nf=NUM,b=THIN)
-    cr += 1
-
-    # Valor final cliente
-    ws1.row_dimensions[cr].height = 15
-    ws1.merge_cells(f'A{cr}:D{cr}')
-    sc(ws1,cr,1,'★ VALOR FINAL CLIENTE',bold=True,bg=VD_OSC,fg=BL,size=10,b=MED)
-    fr(ws1,cr,2,4,VD_OSC,MED)
-    sc(ws1,cr,5,res.get('valorFinal',0),bold=True,bg=VD_OSC,fg=BL,size=10,h='right',nf=NUM,b=MED)
-
-
     # ══ CESANTÍAS POR AÑO (siempre) + DESGLOSE INTERESES ══
     if True:
         VD_MED  = '1A7A4E'
@@ -368,6 +299,97 @@ def generar_excel(data: dict) -> bytes:
         sc(ws1,cr,4,ban_p+ban_c,bold=True,bg=AZ_OSC,fg=BL,size=8,h='right',nf=NUM,b=MED)
         sc(ws1,cr,5,tot_p+tot_c,bold=True,bg=VD_OSC,fg=BL,size=8,h='right',nf=NUM,b=MED)
         cr += 2
+
+    # ══ RESUMEN GENERAL DE LIQUIDACIÓN — siempre al final ══
+    res = resumen
+    cr += 2; ws1.row_dimensions[cr].height = 14
+    ws1.merge_cells(f'A{cr}:{last_col}{cr}')
+    sc(ws1,cr,1,'RESUMEN GENERAL DE LIQUIDACIÓN',bold=True,bg=AZ_OSC,fg=BL,size=9,h='center',b=MED)
+    cr += 1
+
+    # Cabecera 5 cols
+    rg_hdrs = ['CONCEPTO','VALOR NOMINAL','+ INDEXACIÓN','+ INTERESES','= TOTAL']
+    rg_bgs  = [AZ_OSC,'2d4a6f','2d4a6f','2d4a6f','1a3a5c']
+    rg_fgs  = [BL, BL, 'bfdbfe', 'bfdbfe', BL]
+    ws1.row_dimensions[cr].height = 13
+    for ci,(h,bg,fg) in enumerate(zip(rg_hdrs,rg_bgs,rg_fgs),1):
+        sc(ws1,cr,ci,h,bold=True,bg=bg,fg=fg,size=8,
+           h='left' if ci==1 else 'right',b=THIN)
+    cr += 1
+
+    # Fila Prestaciones Sociales
+    nom_p  = res.get('nomPrest',0)
+    idx_p  = res.get('idxPrest', res.get('capPrest',0) - nom_p)
+    int_p  = res.get('intPrestDTF',0) + res.get('intPrestBanc',0)
+    tot_p  = res.get('totalPrest',0)
+    ws1.row_dimensions[cr].height = 12
+    sc(ws1,cr,1,'Prestaciones Sociales',bg='eff6ff',fg='1e40af',bold=True,size=8,b=THIN)
+    sc(ws1,cr,2,nom_p,bg='eff6ff',fg='374151',size=8,h='right',nf=NUM,b=THIN)
+    sc(ws1,cr,3,idx_p,bg='dbeafe',fg='1d4ed8',size=8,h='right',nf=NUM,b=THIN)
+    sc(ws1,cr,4,int_p,bg='dbeafe',fg='1d4ed8',size=8,h='right',nf=NUM,b=THIN)
+    sc(ws1,cr,5,tot_p,bg='1e40af',fg=BL,bold=True,size=8,h='right',nf=NUM,b=THIN)
+    cr += 1
+
+    # Fila Cesantías + Int. Cesantías
+    nom_c  = res.get('nomCes',0)
+    idx_c  = res.get('idxCes', res.get('capCesTot',0) - nom_c)
+    int_c  = res.get('intCesDTF',0) + res.get('intCesBanc',0)
+    tot_c  = res.get('totalCes',0)
+    ws1.row_dimensions[cr].height = 12
+    sc(ws1,cr,1,'Cesantías + Int. Cesantías',bg='ecfdf5',fg='065f46',bold=True,size=8,b=THIN)
+    sc(ws1,cr,2,nom_c,bg='ecfdf5',fg='374151',size=8,h='right',nf=NUM,b=THIN)
+    sc(ws1,cr,3,idx_c,bg='d1fae5',fg='059669',size=8,h='right',nf=NUM,b=THIN)
+    sc(ws1,cr,4,int_c,bg='d1fae5',fg='059669',size=8,h='right',nf=NUM,b=THIN)
+    sc(ws1,cr,5,tot_c,bg='065f46',fg=BL,bold=True,size=8,h='right',nf=NUM,b=THIN)
+    cr += 1
+
+    # Aportes empleador (solo resolución)
+    if res.get('modo')=='resolucion' and res.get('baseRes',0)>0:
+        pension_v = res.get('pension',0); salud_v = res.get('salud',0)
+        ws1.row_dimensions[cr].height = 11
+        ap_lbl = f"Aportes Empleador — Pensión 12%: ${pension_v:,} | Salud 8.5%: ${salud_v:,}"
+        ws1.merge_cells(f'A{cr}:D{cr}')
+        sc(ws1,cr,1,ap_lbl,bg=GR_CLR,fg='475569',size=7,b=THIN)
+        fr(ws1,cr,2,4,GR_CLR,THIN)
+        sc(ws1,cr,5,pension_v+salud_v,bg=GR_CLR,fg='475569',size=8,h='right',nf=NUM,b=THIN)
+        cr += 1
+
+    # Total liquidación
+    tot_gen = res.get('totalFin',0)
+    ws1.row_dimensions[cr].height = 14
+    ws1.merge_cells(f'A{cr}:D{cr}')
+    sc(ws1,cr,1,'TOTAL LIQUIDACIÓN',bold=True,bg='1e293b',fg=BL,size=9,b=MED)
+    fr(ws1,cr,2,4,'1e293b',MED)
+    sc(ws1,cr,5,tot_gen,bold=True,bg='0f172a',fg=BL,size=9,h='right',nf=NUM,b=MED)
+    cr += 1
+
+    # Honorarios
+    hon_pct = res.get('honPct',30)
+    hon_v   = res.get('honV',0) + res.get('honIvaV',0)
+    hon_lbl = f"Honorarios {hon_pct}%" + (' + IVA 19%' if res.get('honIVA')=='noasume' else ' (IVA incluido)')
+    ws1.row_dimensions[cr].height = 12
+    ws1.merge_cells(f'A{cr}:D{cr}')
+    sc(ws1,cr,1,hon_lbl,bold=False,bg=AMA,fg='92400e',size=8,b=THIN)
+    fr(ws1,cr,2,4,AMA,THIN)
+    sc(ws1,cr,5,hon_v,bg=AMA,fg='92400e',bold=True,size=8,h='right',nf=NUM,b=THIN)
+    cr += 1
+
+    # Valor final cliente
+    ws1.row_dimensions[cr].height = 15
+    ws1.merge_cells(f'A{cr}:D{cr}')
+    sc(ws1,cr,1,'★ VALOR FINAL CLIENTE',bold=True,bg=VD_OSC,fg=BL,size=10,b=MED)
+    fr(ws1,cr,2,4,VD_OSC,MED)
+    sc(ws1,cr,5,res.get('valorFinal',0),bold=True,bg=VD_OSC,fg=BL,size=10,h='right',nf=NUM,b=MED)
+    cr += 1
+
+    # Nota: valores sujetos a cambios
+    ws1.row_dimensions[cr].height = 13
+    ws1.merge_cells(f'A{cr}:{last_col}{cr}')
+    nota_cell = ws1.cell(row=cr, column=1,
+                         value='⚠ Nota: Estos valores están sujetos a cambios.')
+    nota_cell.font = Font(name='Arial Narrow', size=8, bold=True, italic=True, color='92400e')
+    nota_cell.alignment = Alignment(horizontal='center', vertical='center')
+    nota_cell.fill = PatternFill('solid', fgColor=AMA)
 
     # ── Pie de página disclaimer ──────────────────────────
     disclaimer = "Los valores presentados en este documento son el resultado de un proceso de liquidación con base en la información suministrada y las tasas vigentes a la fecha de corte. No constituyen reconocimiento ni obligación de pago. El valor final estará sujeto a la forma en que cada entidad realice la liquidación al momento de la resolución de pago."
