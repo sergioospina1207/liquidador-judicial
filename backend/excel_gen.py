@@ -70,7 +70,8 @@ def generar_excel(data: dict) -> bytes:
     # Filtrar cesantías e intereses de cesantías del cuadro principal
     EXCLUIR = {
         'cesantias', 'cesantías',
-        'intereses', 'intereses cesantías', 'intereses cesantias',
+        'intereses', 'intereses ces.', 'intereses ces',
+        'intereses cesantías', 'intereses cesantias',
         'int. cesantías', 'int. cesantias', 'int.cesantías', 'int.cesantias',
         'intereses de cesantías', 'intereses de cesantias',
     }
