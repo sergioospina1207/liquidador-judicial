@@ -111,6 +111,7 @@ def generar_informe(data: dict) -> bytes:
     bj_periodos  = data.get('bjPorPeriodo', [])
     obs          = data.get('observaciones', {})
     resumen      = data.get('resumen', {})
+    ces_por_año  = data.get('cesPorAño', {})
 
     wb = Workbook()
     ws = wb.active
@@ -312,11 +313,95 @@ def generar_informe(data: dict) -> bytes:
     cr += 2
 
     # ══════════════════════════════════════════════════════
-    # III. CRITERIOS Y OBSERVACIONES
+    # III. CESANTÍAS E INTERESES SOBRE CESANTÍAS
+    # ══════════════════════════════════════════════════════
+    if ces_por_año:
+        ws.row_dimensions[cr].height = 14
+        ws.merge_cells(f'A{cr}:{LAST_COL}{cr}')
+        sc(ws, cr, 1, 'III.  CESANTÍAS E INTERESES SOBRE CESANTÍAS', bold=True, size=11)
+        cr += 1
+        cr += 1
+
+        # Cabecera tabla cesantías
+        ces_hdrs = ['Vigencia', 'Ces. Valor Nominal ($)', 'Ces. Valor Indexado ($)',
+                    'Int. Ces. Nominal ($)', 'Int. Ces. Indexado ($)', 'Total Cesantías ($)']
+        ws.row_dimensions[cr].height = 14
+        for ci, h in enumerate(ces_hdrs, 1):
+            sc(ws, cr, ci, h, bold=True, size=9, bg=GR_L,
+               h='right' if ci > 1 else 'left', border=THIN)
+        cr += 1
+
+        sum_ces_neto = sum_ces_idx = sum_int_neto = sum_int_idx = 0
+        for año_c in sorted(ces_por_año.keys(), key=lambda x: int(x)):
+            d = ces_por_año[año_c]
+            ces_n = d.get('cesNeto', 0)
+            ces_i = d.get('cesIdx',  0)
+            int_n = d.get('intNeto', 0)
+            int_i = d.get('intIdx',  0)
+            tot   = ces_i + int_i
+            ws.row_dimensions[cr].height = 13
+            sc(ws, cr, 1, str(año_c),  size=10, border=THIN)
+            sc(ws, cr, 2, ces_n, size=10, h='right', nf=NUM, border=THIN)
+            sc(ws, cr, 3, ces_i, size=10, h='right', nf=NUM, border=THIN)
+            sc(ws, cr, 4, int_n, size=10, h='right', nf=NUM, border=THIN)
+            sc(ws, cr, 5, int_i, size=10, h='right', nf=NUM, border=THIN)
+            sc(ws, cr, 6, tot,   size=10, h='right', nf=NUM, border=THIN)
+            sum_ces_neto += ces_n; sum_ces_idx += ces_i
+            sum_int_neto += int_n; sum_int_idx += int_i
+            cr += 1
+
+        # Fila TOTAL cesantías
+        ws.row_dimensions[cr].height = 13
+        sc(ws, cr, 1, 'TOTAL CESANTÍAS',    bold=True, size=10, bg=GR_M, border=MED)
+        sc(ws, cr, 2, sum_ces_neto, bold=True, size=10, bg=GR_M, h='right', nf=NUM, border=MED)
+        sc(ws, cr, 3, sum_ces_idx,  bold=True, size=10, bg=GR_M, h='right', nf=NUM, border=MED)
+        sc(ws, cr, 4, sum_int_neto, bold=True, size=10, bg=GR_M, h='right', nf=NUM, border=MED)
+        sc(ws, cr, 5, sum_int_idx,  bold=True, size=10, bg=GR_M, h='right', nf=NUM, border=MED)
+        sc(ws, cr, 6, sum_ces_idx + sum_int_idx, bold=True, size=10, bg=GR_M, h='right', nf=NUM, border=MED)
+        cr += 2
+
+    # ── RESUMEN CONSOLIDADO DE LA SENTENCIA ────────────────
+    total_prest_idx  = resumen.get('totalIndexado', total_idx_global)
+    total_ces_idx    = resumen.get('totalCesTot', 0)
+    total_sentencia  = resumen.get('totalSentencia', total_prest_idx + total_ces_idx)
+
+    ws.row_dimensions[cr].height = 6
+    cr += 1
+
+    # Bloque resumen en 3 filas
+    ws.merge_cells(f'A{cr}:{LAST_COL}{cr}')
+    sc(ws, cr, 1, 'RESUMEN VALOR DE LA SENTENCIA', bold=True, size=11,
+       border=Border(top=Side(style='medium', color='000000'),
+                     bottom=Side(style='thin', color='000000')))
+    cr += 1
+
+    def fila_resumen(label, valor):
+        nonlocal cr
+        ws.merge_cells(f'A{cr}:F{cr}')
+        sc(ws, cr, 1, label, bold=False, size=11)
+        sc(ws, cr, 7, '',    size=11)
+        sc(ws, cr, 8, valor, bold=True, size=11, h='right', nf=NUM,
+           border=Border(bottom=Side(style='hair', color='595959')))
+        ws.row_dimensions[cr].height = 14
+        cr += 1
+
+    fila_resumen('Prestaciones sociales indexadas:', total_prest_idx)
+    fila_resumen('Cesantías e intereses indexados:', total_ces_idx)
+
+    # Fila TOTAL SENTENCIA
+    ws.row_dimensions[cr].height = 16
+    ws.merge_cells(f'A{cr}:F{cr}')
+    sc(ws, cr, 1, 'VALOR TOTAL SENTENCIA:', bold=True, size=12, bg=GR_M, border=MED)
+    sc(ws, cr, 7, '', bg=GR_M, border=MED)
+    sc(ws, cr, 8, total_sentencia, bold=True, size=12, bg=GR_M, h='right', nf=NUM, border=MED)
+    cr += 2
+
+    # ══════════════════════════════════════════════════════
+    # IV. CRITERIOS Y OBSERVACIONES
     # ══════════════════════════════════════════════════════
     ws.row_dimensions[cr].height = 14
     ws.merge_cells(f'A{cr}:{LAST_COL}{cr}')
-    sc(ws, cr, 1, 'III.  CRITERIOS Y OBSERVACIONES DE LIQUIDACIÓN', bold=True, size=11)
+    sc(ws, cr, 1, 'IV.  CRITERIOS Y OBSERVACIONES DE LIQUIDACIÓN', bold=True, size=11)
     cr += 1
 
     obs_lines = obs.get('texto', [])
@@ -333,7 +418,7 @@ def generar_informe(data: dict) -> bytes:
     # ══════════════════════════════════════════════════════
     ws.row_dimensions[cr].height = 14
     ws.merge_cells(f'A{cr}:{LAST_COL}{cr}')
-    sc(ws, cr, 1, 'IV.  BONIFICACIÓN JUDICIAL (BJ) UTILIZADA POR PERÍODO', bold=True, size=11)
+    sc(ws, cr, 1, 'V.  BONIFICACIÓN JUDICIAL (BJ) UTILIZADA POR PERÍODO', bold=True, size=11)
     cr += 1
 
     bj_hdrs = ['Desde', 'Hasta', 'Cargo / Grado', 'BJ Mensual ($)']
