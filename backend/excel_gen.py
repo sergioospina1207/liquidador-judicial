@@ -323,10 +323,10 @@ def generar_excel(data: dict) -> bytes:
     cr += 1
 
     # Fila Prestaciones Sociales
-    nom_p  = res.get('nomPrest',0)
-    idx_p  = res.get('idxPrest', res.get('capPrest',0) - nom_p)
-    int_p  = res.get('intPrestDTF',0) + res.get('intPrestBanc',0)
-    tot_p  = res.get('totalPrest',0)
+    nom_p  = res.get('nomPrest',0) or 0
+    idx_p  = res.get('idxPrest', (res.get('capPrest',0) or 0) - nom_p)
+    int_p  = (res.get('intPrestDTF',0) or 0) + (res.get('intPrestBanc',0) or 0)
+    tot_p  = res.get('totalPrest',0) or 0
     ws1.row_dimensions[cr].height = 12
     sc(ws1,cr,1,'Prestaciones Sociales',bg='eff6ff',fg='1e40af',bold=True,size=8,b=THIN)
     sc(ws1,cr,2,nom_p,bg='eff6ff',fg='374151',size=8,h='right',nf=NUM,b=THIN)
@@ -336,10 +336,10 @@ def generar_excel(data: dict) -> bytes:
     cr += 1
 
     # Fila Cesantías + Int. Cesantías
-    nom_c  = res.get('nomCes',0)
-    idx_c  = res.get('idxCes', res.get('capCesTot',0) - nom_c)
-    int_c  = res.get('intCesDTF',0) + res.get('intCesBanc',0)
-    tot_c  = res.get('totalCes',0)
+    nom_c  = res.get('nomCes',0) or 0
+    idx_c  = res.get('idxCes', (res.get('capCesTot',0) or 0) - nom_c)
+    int_c  = (res.get('intCesDTF',0) or 0) + (res.get('intCesBanc',0) or 0)
+    tot_c  = res.get('totalCes',0) or 0
     ws1.row_dimensions[cr].height = 12
     sc(ws1,cr,1,'Cesantías + Int. Cesantías',bg='ecfdf5',fg='065f46',bold=True,size=8,b=THIN)
     sc(ws1,cr,2,nom_c,bg='ecfdf5',fg='374151',size=8,h='right',nf=NUM,b=THIN)
@@ -360,13 +360,31 @@ def generar_excel(data: dict) -> bytes:
         cr += 1
 
     # Total liquidación
-    tot_gen = res.get('totalFin',0)
+    tot_gen = res.get('totalFin',0) or 0
     ws1.row_dimensions[cr].height = 14
     ws1.merge_cells(f'A{cr}:D{cr}')
     sc(ws1,cr,1,'TOTAL LIQUIDACIÓN',bold=True,bg='1e293b',fg=BL,size=9,b=MED)
     fr(ws1,cr,2,4,'1e293b',MED)
     sc(ws1,cr,5,tot_gen,bold=True,bg='0f172a',fg=BL,size=9,h='right',nf=NUM,b=MED)
     cr += 1
+
+    # Descuento fondo (solo modo normal)
+    if res.get('modo') != 'resolucion' and res.get('pctDesc',0):
+        pct_desc = res.get('pctDesc', 15.5)
+        desc_v   = res.get('descV', 0) or 0
+        val_comp = res.get('valorCompra', 0) or 0
+        ws1.row_dimensions[cr].height = 12
+        ws1.merge_cells(f'A{cr}:D{cr}')
+        sc(ws1,cr,1,f'Descuento Fondo {pct_desc}%',bold=False,bg=NAR,fg='92400e',size=8,b=THIN)
+        fr(ws1,cr,2,4,NAR,THIN)
+        sc(ws1,cr,5,desc_v,bg=NAR,fg='7f0000',bold=False,size=8,h='right',nf=NUM,b=THIN)
+        cr += 1
+        ws1.row_dimensions[cr].height = 12
+        ws1.merge_cells(f'A{cr}:D{cr}')
+        sc(ws1,cr,1,'VALOR COMPRA NETO',bold=True,bg=VD_CLR,fg=VD_OSC,size=8,b=THIN)
+        fr(ws1,cr,2,4,VD_CLR,THIN)
+        sc(ws1,cr,5,val_comp,bold=True,bg=VD_CLR,fg=VD_OSC,size=8,h='right',nf=NUM,b=THIN)
+        cr += 1
 
     # Honorarios
     hon_pct = res.get('honPct',30)
