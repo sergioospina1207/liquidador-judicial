@@ -3294,7 +3294,25 @@ function exportarInforme(){
   Object.values(prestsByYear).forEach(filas=>{
     filas.forEach(f=>{totalBruto+=f.bruto;totalNeto+=f.neto;totalIdxTot+=f.idxTot;});
   });
-  const resumen={totalBruto, totalNeto, totalIndexado:totalIdxTot};
+  // Cesantías e intereses por año
+  const cesPorAño = state._cesPorAño || {};
+  let totalCesNeto=0, totalCesIdx=0, totalIntNeto=0, totalIntIdx=0;
+  Object.values(cesPorAño).forEach(d=>{
+    totalCesNeto+=d.cesNeto||0; totalCesIdx+=d.cesIdx||0;
+    totalIntNeto+=d.intNeto||0; totalIntIdx+=d.intIdx||0;
+  });
+
+  const resumen={
+    totalBruto, totalNeto, totalIndexado:totalIdxTot,
+    // cesantías
+    totalCesNeto:Math.round(totalCesNeto),
+    totalCesIdx:Math.round(totalCesIdx),
+    totalIntNeto:Math.round(totalIntNeto),
+    totalIntIdx:Math.round(totalIntIdx),
+    totalCesTot:Math.round(totalCesIdx+totalIntIdx),
+    // gran total sentencia
+    totalSentencia:Math.round(totalIdxTot+(totalCesIdx+totalIntIdx))
+  };
 
   const payload={
     cliente:{
@@ -3307,7 +3325,7 @@ function exportarInforme(){
       periodo:periodoStr,
       ipc:ipcEj.toFixed(2)+' ('+state.mesEjec+' '+state.añoEjec+')'
     },
-    prestsByYear, bjPorPeriodo, observaciones, resumen
+    prestsByYear, bjPorPeriodo, observaciones, resumen, cesPorAño
   };
 
   const btn=document.getElementById('btn-informe-tec');
