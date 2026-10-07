@@ -378,6 +378,28 @@ async def exportar_excel(request: Request):
         raise HTTPException(500, str(e))
 
 
+@app.post("/api/exportar-informe")
+async def exportar_informe(request: Request):
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from informe_gen import generar_informe
+        data = await request.json()
+        xlsx_bytes = generar_informe(data)
+        nombre = data.get('cliente',{}).get('nombre','informe').replace(' ','_')
+        cc     = data.get('cliente',{}).get('cc','')
+        fname  = f"InformeTecnico{'_'+cc if cc else ''}_{nombre}.xlsx"
+        return StreamingResponse(
+            io.BytesIO(xlsx_bytes),
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={'Content-Disposition': f'attachment; filename="{fname}"'}
+        )
+    except Exception as e:
+        logger.error(f"Error generando informe técnico: {e}")
+        import traceback; traceback.print_exc()
+        raise HTTPException(500, str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)), reload=True)
