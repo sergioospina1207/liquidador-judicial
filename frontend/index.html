@@ -3073,6 +3073,11 @@ function _generarExcel(){
     intereses:Math.round(intPrestE.total+intCesE.total),
     netoIdx:Math.round(netoIdxE),
     totalFin:Math.round(totalFinE),
+    // Descuento fondo (modo normal)
+    pctDesc:parseFloat((pctDesc*100).toFixed(1)),
+    descV:Math.round(totalFinE*pctDesc),
+    totalBase:Math.round(totalFinE),
+    valorCompra:Math.round(totalFinE*(1-pctDesc)),
     honPct:Math.round(honPct*100), honV:Math.round(honVE),
     honIVA, honIvaV:Math.round(honIvaVE),
     valorFinal:Math.round(totalFinE-honVE-honIvaVE)
