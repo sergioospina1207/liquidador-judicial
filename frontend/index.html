@@ -2925,6 +2925,8 @@ function _generarExcel(){
   const mc=MESES_C[MESES.indexOf(state.mesEjec)];
   const ipcEj=APPD.ipc[state.añoEjec]?.[mc]||0;
 
+  // Cesantías e intereses se excluyen del BRUTO/NETO de prestaciones
+  // — se calculan por separado con IPC feb año siguiente en state._cesPorAño
   const COLS=[
     {key:'prodS1',     label:'Bonif. Prod S1',   ibc:true},
     {key:'prodS2',     label:'Bonif. Prod S2',   ibc:true},
@@ -2933,8 +2935,6 @@ function _generarExcel(){
     {key:'primaVac',   label:'Prima Vacaciones'},
     {key:'sueldoVac10',label:'Sueldo Vac.(1/10)'},
     {key:'primaNov',   label:'Prima Navidad'},
-    {key:'cesantias',  label:'Cesantías'},
-    {key:'intereses',  label:'Intereses Ces.'},
   ];
 
   // Construir filas de datos
