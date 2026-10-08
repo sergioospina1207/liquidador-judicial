@@ -1978,29 +1978,20 @@ function generarResumen(){
 
   tbl.appendChild(tbody);tw.appendChild(tbl);
 
-  // Cards resumen — solo bruto, deducciones, neto, indexado
+  // Cards resumen — siempre muestra desglose prestaciones/cesantías/int.cesantías
   const rc=document.createElement('div');rc.className='rcards';
-  if(state.resolucion){
-    rc.innerHTML=
-      '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
-      '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
-      '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
-      '<div class="rc or"><div class="rl">NETO INDEXADO (Total)</div><div class="rv">$'+fmt(gX)+'</div>'+
-        '<div class="rs">Diferencia indexación: $'+fmt(dif)+'</div></div>'+
-      '<div class="rc" style="background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7"><div class="rl" style="color:#065f46">↳ Prestaciones Principales</div>'+
-        '<div class="rv" style="color:#065f46">$'+fmt(gX_prest)+'</div></div>'+
-      '<div class="rc" style="background:#ccfbf1;color:#0f766e;border:1.5px solid #5eead4"><div class="rl" style="color:#0f766e">↳ Cesantías (indexadas)</div>'+
-        '<div class="rv" style="color:#0f766e">$'+fmt(gX_ces)+'</div></div>'+
-      '<div class="rc" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc"><div class="rl" style="color:#0369a1">↳ Int. Cesantías (indexados)</div>'+
-        '<div class="rv" style="color:#0369a1">$'+fmt(gX_intCes)+'</div></div>';
-  } else {
-    rc.innerHTML=
-      '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
-      '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
-      '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
-      '<div class="rc or"><div class="rl">NETO INDEXADO</div><div class="rv">$'+fmt(gX)+'</div>'+
-      '<div class="rs">Diferencia indexación: $'+fmt(dif)+'</div></div>';
-  }
+  rc.innerHTML=
+    '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
+    '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
+    '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
+    '<div class="rc or"><div class="rl">NETO INDEXADO</div><div class="rv">$'+fmt(gX)+'</div>'+
+      '<div class="rs">Diferencia indexación: $'+fmt(dif)+'</div></div>'+
+    '<div class="rc" style="background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7"><div class="rl" style="color:#065f46">↳ Prestaciones Principales</div>'+
+      '<div class="rv" style="color:#065f46">$'+fmt(gX_prest)+'</div></div>'+
+    '<div class="rc" style="background:#ccfbf1;color:#0f766e;border:1.5px solid #5eead4"><div class="rl" style="color:#0f766e">↳ Cesantías (indexadas)</div>'+
+      '<div class="rv" style="color:#0f766e">$'+fmt(gX_ces)+'</div></div>'+
+    '<div class="rc" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc"><div class="rl" style="color:#0369a1">↳ Int. Cesantías (indexados)</div>'+
+      '<div class="rv" style="color:#0369a1">$'+fmt(gX_intCes)+'</div></div>';
   cont.insertBefore(rc,cont.firstChild);
   // Guardar neto indexado en state para usarlo en intereses
   state.netoIndexado=gX;
