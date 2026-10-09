@@ -4620,97 +4620,44 @@ restaurarSesionLocal();
         <div class="fg"><label>Radicado</label><input id="ds-radicado" type="text" placeholder="Número de radicado (opcional)"></div>
         <div class="fg"><label>Demandados</label><input id="ds-demandados" type="text" value="Nación – Rama Judicial – Consejo Superior de la Judicatura"></div>
         <div class="fg"><label>Prescripción</label><input id="ds-prescripcion" type="date" oninput="dsOnInput()"></div>
-        <div class="fg"><label>Ejecutoria</label><input id="ds-ejecutoria" type="date" onchange="dsAutoIpc(this.value);dsOnInput()"></div>
         <div class="fg"><label>Turno de pago</label><input id="ds-turno" type="number" placeholder="Número de turno" oninput="dsOnInput()"></div>
         <div class="fg">
-          <label>IPC mes de ejecutoria</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input id="ds-ipc-final" type="number" step="0.01" placeholder="ej: 151.48" style="flex:1" oninput="dsOnInput()">
+          <label>Vinculado con anterioridad a la Rama</label>
+          <select id="ds-vinculado" onchange="dsOnInput()">
+            <option value="no">No</option>
+            <option value="si">Sí</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Ejecutoria — Mes y año</label>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <select id="ds-ejec-mes" onchange="dsAutoIpcFromSel();dsOnInput()" style="flex:1;min-width:100px">
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+            <select id="ds-ejec-año" onchange="dsAutoIpcFromSel();dsOnInput()" style="width:80px">
+              <!-- Generado por JS -->
+            </select>
             <span id="ds-ipc-mes-label" style="font-size:11px;color:var(--vd);font-weight:600;white-space:nowrap"></span>
           </div>
         </div>
         <div class="fg">
-          <label>Días de vacaciones (default 22)</label>
+          <label>IPC ejecutoria <small style="font-weight:400">(auto)</small></label>
+          <input id="ds-ipc-final" type="number" step="0.01" placeholder="Auto desde IPC DANE" oninput="dsOnInput()" readonly style="background:var(--bg2)">
+        </div>
+        <div class="fg">
+          <label>Días de vacaciones tomados</label>
           <input id="ds-dias-vac" type="number" value="22" min="1" max="30" oninput="dsOnInput()">
         </div>
       </div>
       <hr>
-      <!-- Años laborados -->
+      <!-- Años laborados: mes a mes, con meses de pago por año -->
       <div>
-        <p style="font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">📅 Años laborados — marque cada vigencia e ingrese los días trabajados ese año</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px" id="ds-years-grid">
+        <p style="font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">📅 Años laborados — marque el año, ingrese días por mes y configure los meses de pago</p>
+        <div id="ds-years-grid">
           <!-- Generado por JS -->
-        </div>
-      </div>
-      <hr>
-      <!-- Meses de pago por prestación -->
-      <div>
-        <p style="font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">📅 Mes de pago por prestación (configurable)</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">
-          <div class="fg"><label>Bonif. Productividad S1</label>
-            <select id="ds-mes-prod1" onchange="dsOnInput()">
-              <option value="6" selected>Junio</option>
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-            </select></div>
-          <div class="fg"><label>Bonif. Productividad S2</label>
-            <select id="ds-mes-prod2" onchange="dsOnInput()">
-              <option value="12" selected>Diciembre</option>
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option>
-            </select></div>
-          <div class="fg"><label>Bonif. Servicios</label>
-            <select id="ds-mes-serv" onchange="dsOnInput()">
-              <option value="12" selected>Diciembre</option>
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option>
-            </select></div>
-          <div class="fg"><label>Prima Servicios</label>
-            <select id="ds-mes-pserv" onchange="dsOnInput()">
-              <option value="7" selected>Julio</option>
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option>
-              <option value="11">Noviembre</option><option value="12">Diciembre</option>
-            </select></div>
-          <div class="fg"><label>Prima Vacaciones</label>
-            <select id="ds-mes-pvac" onchange="dsOnInput()">
-              <option value="12" selected>Diciembre</option>
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option>
-            </select></div>
-          <div class="fg"><label>Sueldo Vacaciones</label>
-            <select id="ds-mes-svac" onchange="dsOnInput()">
-              <option value="12" selected>Diciembre</option>
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option>
-            </select></div>
-          <div class="fg"><label>Vac. Bonif. Judicial</label>
-            <select id="ds-mes-vbj" onchange="dsOnInput()">
-              <option value="12" selected>Diciembre</option>
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option>
-            </select></div>
-          <div class="fg"><label>Prima Navidad</label>
-            <select id="ds-mes-pnav" onchange="dsOnInput()">
-              <option value="12" selected>Diciembre</option>
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option>
-            </select></div>
         </div>
       </div>
     </div>
@@ -4832,31 +4779,44 @@ function dsDiasVac(){
   const v = parseInt(document.getElementById('ds-dias-vac')?.value);
   return isNaN(v)||v<1?22:v;
 }
-function dsAutoIpc(val){
-  if(!val) return;
-  const d = new Date(val+'T00:00:00');
-  const año = String(d.getFullYear());
-  const mes = DS_MESES_ABREV[d.getMonth()];
-  const row = (typeof ipcData!=='undefined') ? ipcData[año] : null;
-  const ipc = row ? row[mes] : null;
+function dsAutoIpcFromSel(){
+  const mes = parseInt(document.getElementById('ds-ejec-mes')?.value)||0;
+  const año = parseInt(document.getElementById('ds-ejec-año')?.value)||0;
+  if(!mes||!año) return;
+  const mesAbrev = DS_MESES_ABREV[mes-1];
+  const row = (typeof ipcData!=='undefined') ? ipcData[String(año)] : null;
+  const ipc = row ? row[mesAbrev] : null;
   const input = document.getElementById('ds-ipc-final');
   const label = document.getElementById('ds-ipc-mes-label');
   if(ipc && input){
     input.value = ipc;
-    if(label) label.textContent = `✅ ${mes}-${año}: ${ipc}`;
+    if(label) label.textContent = `✅ ${mesAbrev}-${año}: ${ipc}`;
   } else {
-    if(label) label.textContent = `⚠️ Sin dato IPC ${mes}-${año}`;
+    if(label) label.textContent = `⚠️ Sin dato ${mesAbrev}-${año}`;
   }
 }
-function dsGetMesPago(){
-  const g = id => parseInt(document.getElementById(id)?.value)||12;
+// dsAutoIpc kept for backward compat if called anywhere
+function dsAutoIpc(val){ dsAutoIpcFromSel(); }
+
+function dsGetMesPagoYear(a){
+  // Per-year payment month configuration
+  const g = (suf,def) => {
+    const el = document.getElementById(`ds-mp-${suf}-${a}`);
+    return el ? (parseInt(el.value)||def) : def;
+  };
   return {
-    prod1: g('ds-mes-prod1'), prod2: g('ds-mes-prod2'),
-    serv:  g('ds-mes-serv'),  pserv: g('ds-mes-pserv'),
-    pvac:  g('ds-mes-pvac'),  svac:  g('ds-mes-svac'),
-    vbj:   g('ds-mes-vbj'),   pnav:  g('ds-mes-pnav')
+    prod1: g('prod1',6), prod2: g('prod2',12),
+    serv:  g('serv',12), pserv: g('pserv',7),
+    pvac:  g('pvac',12), svac:  g('svac',12),
+    vbj:   g('vbj',12),  pnav:  g('pnav',12)
   };
 }
+// Legacy alias — uses year-specific selectors for the first checked year
+function dsGetMesPago(){
+  const years = dsGetCheckedYears();
+  return years.length ? dsGetMesPagoYear(years[0]) : {prod1:6,prod2:12,serv:12,pserv:7,pvac:12,svac:12,vbj:12,pnav:12};
+}
+
 function dsGetCheckedYears(){
   return Object.keys(DS_DECRETOS_ASESOR).map(Number).filter(a=>{
     const cb = document.getElementById(`ds-year-${a}`);
@@ -4864,31 +4824,135 @@ function dsGetCheckedYears(){
   }).sort((a,b)=>a-b);
 }
 function dsGetYearDias(a){
-  const el = document.getElementById(`ds-dias-${a}`);
-  return el ? (parseInt(el.value)||0) : 0;
+  // Sum of all month inputs for this year
+  let total = 0;
+  for(let m=1;m<=12;m++){
+    const el = document.getElementById(`ds-dm-${a}-${m}`);
+    if(el) total += (parseInt(el.value)||0);
+  }
+  // If per-month inputs don't exist yet, fallback to old single input
+  const fallback = document.getElementById(`ds-dias-${a}`);
+  if(total===0 && fallback) total = (parseInt(fallback.value)||0);
+  return total;
+}
+function dsGetYearDiasS1(a){
+  // Days Jan-Jun
+  let total = 0;
+  for(let m=1;m<=6;m++){
+    const el = document.getElementById(`ds-dm-${a}-${m}`);
+    if(el) total += (parseInt(el.value)||0);
+  }
+  return total;
+}
+function dsGetYearDiasS2(a){
+  // Days Jul-Dec
+  let total = 0;
+  for(let m=7;m<=12;m++){
+    const el = document.getElementById(`ds-dm-${a}-${m}`);
+    if(el) total += (parseInt(el.value)||0);
+  }
+  return total;
 }
 
-// ── 4. Inicialización — generar grilla de años ────────────────
+// ── 4. Inicialización ────────────────────────────────────────
 function dsInit(){
+  // Populate ejecutoria year selector
+  const añoSel = document.getElementById('ds-ejec-año');
+  if(añoSel && !añoSel.children.length){
+    for(let y=2026;y>=2011;y--){
+      const o = document.createElement('option');
+      o.value=y; o.textContent=y;
+      if(y===2025) o.selected=true;
+      añoSel.appendChild(o);
+    }
+  }
+  // Generate year cards
   const grid = document.getElementById('ds-years-grid');
-  if(!grid || grid.children.length > 0) return; // ya inicializado
+  if(!grid || grid.children.length > 0) return;
+  const MESES_NOM = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const años = Object.keys(DS_DECRETOS_ASESOR).map(Number).sort((a,b)=>a-b);
+  const msOpts = (def)=>DS_MESES.map((nm,i)=>`<option value="${i+1}"${i+1===def?' selected':''}>${nm}</option>`).join('');
+
   grid.innerHTML = años.map(a=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:8px;background:#fff">
-      <input type="checkbox" id="ds-year-${a}" value="${a}"
-        style="width:16px;height:16px;cursor:pointer;accent-color:var(--az2)"
-        onchange="dsOnYearCheck(${a})">
-      <label for="ds-year-${a}" style="font-weight:700;font-size:13px;cursor:pointer;min-width:36px">${a}</label>
-      <input type="number" id="ds-dias-${a}" value="360" min="1" max="365"
-        style="width:70px;padding:5px 7px;border:1px solid var(--bd);border-radius:6px;font-size:13px;text-align:center"
-        placeholder="días" disabled oninput="dsOnInput()">
-      <span style="font-size:11px;color:var(--tx2)">días</span>
-    </div>`).join('');
+<div id="ds-ycard-${a}" style="border:1.5px solid var(--bd);border-radius:10px;margin-bottom:10px;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);cursor:pointer" onclick="dsToggleYear(${a})">
+    <input type="checkbox" id="ds-year-${a}" value="${a}"
+      style="width:16px;height:16px;accent-color:var(--az2)"
+      onchange="dsOnYearCheck(${a});event.stopPropagation()">
+    <span style="font-weight:700;font-size:14px">Vigencia ${a}</span>
+    <span id="ds-ysummary-${a}" style="font-size:11px;color:var(--tx2);margin-left:4px"></span>
+    <span style="margin-left:auto;font-size:11px;color:var(--tx2)" id="ds-ytoggle-${a}">▶ Expandir</span>
+  </div>
+  <div id="ds-ybody-${a}" style="display:none;padding:14px">
+    <!-- Días por mes -->
+    <p style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;margin-bottom:8px">Días trabajados por mes</p>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px">
+      ${MESES_NOM.map((nm,i)=>`
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--tx2);margin-bottom:3px">${nm}</div>
+        <input type="number" id="ds-dm-${a}-${i+1}" min="0" max="31" value="0"
+          style="width:100%;padding:4px;border:1px solid var(--bd);border-radius:5px;font-size:12px;text-align:center"
+          oninput="dsOnDiasChange(${a})">
+      </div>`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--tx2);margin-bottom:14px">
+      Total días: <strong id="ds-ytotal-${a}">0</strong> &nbsp;|&nbsp; S1 (Ene–Jun): <strong id="ds-ys1-${a}">0</strong> &nbsp;|&nbsp; S2 (Jul–Dic): <strong id="ds-ys2-${a}">0</strong>
+    </div>
+    <!-- Meses de pago por prestación (este año) -->
+    <p style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;margin-bottom:8px">Meses de pago — vigencia ${a}</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+      <div class="fg" style="margin:0"><label style="font-size:11px">Bonif.Prod S1</label>
+        <select id="ds-mp-prod1-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(6)}</select></div>
+      <div class="fg" style="margin:0"><label style="font-size:11px">Bonif.Prod S2</label>
+        <select id="ds-mp-prod2-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
+      <div class="fg" style="margin:0"><label style="font-size:11px">Bonif.Servicios</label>
+        <select id="ds-mp-serv-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
+      <div class="fg" style="margin:0"><label style="font-size:11px">Prima Servicios</label>
+        <select id="ds-mp-pserv-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(7)}</select></div>
+      <div class="fg" style="margin:0"><label style="font-size:11px">Prima Vacaciones</label>
+        <select id="ds-mp-pvac-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
+      <div class="fg" style="margin:0"><label style="font-size:11px">Sueldo Vacaciones</label>
+        <select id="ds-mp-svac-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
+      <div class="fg" style="margin:0"><label style="font-size:11px">Vac.Bonif.Judicial</label>
+        <select id="ds-mp-vbj-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
+      <div class="fg" style="margin:0"><label style="font-size:11px">Prima Navidad</label>
+        <select id="ds-mp-pnav-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
+    </div>
+  </div>
+</div>`).join('');
+}
+
+function dsToggleYear(a){
+  const body = document.getElementById(`ds-ybody-${a}`);
+  const tog  = document.getElementById(`ds-ytoggle-${a}`);
+  const cb   = document.getElementById(`ds-year-${a}`);
+  if(!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(tog) tog.textContent = open ? '▶ Expandir' : '▲ Colapsar';
 }
 function dsOnYearCheck(a){
-  const cb = document.getElementById(`ds-year-${a}`);
-  const inp = document.getElementById(`ds-dias-${a}`);
-  if(inp) inp.disabled = !cb.checked;
+  const cb   = document.getElementById(`ds-year-${a}`);
+  const body = document.getElementById(`ds-ybody-${a}`);
+  const tog  = document.getElementById(`ds-ytoggle-${a}`);
+  if(body && cb.checked){
+    body.style.display = 'block';
+    if(tog) tog.textContent = '▲ Colapsar';
+  }
+  dsOnInput();
+}
+function dsOnDiasChange(a){
+  const s1 = dsGetYearDiasS1(a);
+  const s2 = dsGetYearDiasS2(a);
+  const tot = s1+s2;
+  const ts1 = document.getElementById(`ds-ys1-${a}`);
+  const ts2 = document.getElementById(`ds-ys2-${a}`);
+  const tt  = document.getElementById(`ds-ytotal-${a}`);
+  const sm  = document.getElementById(`ds-ysummary-${a}`);
+  if(ts1) ts1.textContent = s1;
+  if(ts2) ts2.textContent = s2;
+  if(tt)  tt.textContent  = tot;
+  if(sm)  sm.textContent  = tot ? `(${tot} días)` : '';
   dsOnInput();
 }
 function dsOnInput(){
@@ -4912,9 +4976,9 @@ function dsCalcYear(a){
   const difS = dS - gS;
   const difB = dB - gB;
 
-  // Semestres (proporcional al total)
-  const diasS1 = Math.min(totalDias, 180);
-  const diasS2 = Math.max(0, totalDias - 180);
+  // Semestres — from per-month inputs
+  const diasS1 = dsGetYearDiasS1(a);
+  const diasS2 = dsGetYearDiasS2(a);
 
   // Diferencias salariales diarias (proporcional a días)
   const difSTotal = difS * totalDias / 30; // monthly dif × months
@@ -4994,7 +5058,6 @@ function dsUpdateResumen(){
     cont.innerHTML='<p style="color:var(--tx2);font-size:13px">Seleccione años laborados e ingrese el IPC de ejecutoria.</p>';
     return;
   }
-  const mp = dsGetMesPago();
   let totalIdx=0, totalCesIdx=0, totalIntIdx=0;
   let vigCards='';
 
@@ -5002,28 +5065,29 @@ function dsUpdateResumen(){
     const c = dsCalcYear(a);
     if(!c) continue;
     const d = c.dif;
+    const mp = dsGetMesPagoYear(a); // per-year payment months
 
     // Indexación de cada concepto
-    const idx=(mes,año,val,exempt=false)=>{
+    const idxCalc=(mes,año,val,exempt=false)=>{
       const ipcI = dsIpc(año||a, mes);
       const fac = (ipcI&&ipcFinal) ? ipcFinal/ipcI : null;
       const ded = exempt ? 0 : val*0.09;
       const neto = val - ded;
-      const idx = fac ? neto*fac : 0;
-      return {val, ded, neto, ipcI, fac, idx};
+      const idxV = fac ? neto*fac : 0;
+      return {val, ded, neto, ipcI, fac, idx:idxV};
     };
 
     // Conceptos con su mes y año de pago
-    const cDifSal   = idx(1,  a,  d.salTotal);      // acumulado mensual — usar mes 1 como referencia (promedio año)
-    const cDifBonif = idx(1,  a,  d.bonifTotal);
-    const cProd1    = idx(mp.prod1, a, d.prod1);
-    const cProd2    = idx(mp.prod2, a, d.prod2);
-    const cServ     = idx(mp.serv,  a, d.serv);
-    const cPserv    = idx(mp.pserv, a, d.pserv, true); // Prima Servicios: exenta
-    const cPvac     = idx(mp.pvac,  a, d.pvac);
-    const cSvac     = idx(mp.svac,  a, d.svac,  true); // Sueldo Vac: exento
-    const cVbj      = idx(mp.vbj,   a, d.vbj);
-    const cPnav     = idx(mp.pnav,  a, d.pnav);
+    const cDifSal   = idxCalc(1,  a,  d.salTotal);
+    const cDifBonif = idxCalc(1,  a,  d.bonifTotal);
+    const cProd1    = idxCalc(mp.prod1, a, d.prod1);
+    const cProd2    = idxCalc(mp.prod2, a, d.prod2);
+    const cServ     = idxCalc(mp.serv,  a, d.serv);
+    const cPserv    = idxCalc(mp.pserv, a, d.pserv, true); // Prima Servicios: exenta
+    const cPvac     = idxCalc(mp.pvac,  a, d.pvac);
+    const cSvac     = idxCalc(mp.svac,  a, d.svac,  true); // Sueldo Vac: exento
+    const cVbj      = idxCalc(mp.vbj,   a, d.vbj);
+    const cPnav     = idxCalc(mp.pnav,  a, d.pnav);
 
     // Cesantías: IPC desde Feb año+1; Intereses: IPC desde Ene año+1
     const ipcCesI = dsIpc(a+1, 2);
@@ -5160,8 +5224,6 @@ function dsUpdateDetalle(){
     cont.innerHTML='<p style="color:var(--tx2);font-size:13px">Seleccione años laborados e ingrese el IPC de ejecutoria.</p>';
     return;
   }
-  const mp = dsGetMesPago();
-
   // Build flat rows: each concept per year
   const rows=[];
   let grandTotal=0;
@@ -5181,6 +5243,7 @@ function dsUpdateDetalle(){
     const c = dsCalcYear(a);
     if(!c) continue;
     const d=c.dif;
+    const mp = dsGetMesPagoYear(a); // per-year
     addRow(a,'Dif. Salario (mensual acum.)', 1, a, d.salTotal);
     addRow(a,'Dif. Bonif. Judicial (mensual acum.)', 1, a, d.bonifTotal);
     addRow(a,'Bonif. Productividad S1', mp.prod1, a, d.prod1);
