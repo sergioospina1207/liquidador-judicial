@@ -171,6 +171,10 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
     <h1>Liquidador Master</h1>
     <p>By Sergio Ospina · Rama Judicial & Fiscalía General de la Nación</p>
   </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+    <span id="usuario-actual-label" style="font-size:12px;color:#93c5fd;font-weight:500"></span>
+    <button id="btn-logout" onclick="doLogout()" style="display:none;background:#1e3a5f;color:#fff;border:1px solid #3b82f6;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">🚪 Salir</button>
+  </div>
 </div>
 
 <div class="tabs">
@@ -2115,15 +2119,17 @@ function _marcarCambio(){
 async function _guardarHistorial(totales){
   const ahora=new Date();
   const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clientePrescripcion:state.clientePrescripcion||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',clienteIngresoAnterior:state.clienteIngresoAnterior||'',años:state.años,lxm:state.lxm,mesesPagoAnual:state.mesesPagoAnual||{},selectorPrestAnual:state.selectorPrestAnual||{},mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false,proporcional:state.proporcional||false,honPct:state.honPct||30,honIVA:state.honIVA||'asume'});
+  const elaboradoPor=_usuarioActual?.email||'(sin sesión)';
   const entrada={
     id:Date.now(),
     fecha:ahora.toLocaleDateString('es-CO')+' '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
     nip:state.clienteNIP||'(sin NIP)',nombre:state.clienteNombre||'(sin nombre)',
     años:[...state.años].sort((a,b)=>a-b).join(', '),mesEjec:state.mesEjec+' '+state.añoEjec,
-    totalBruto:totales.gB,totalNeto:totales.gN,totalIndexado:totales.gX,snap:snapStr
+    totalBruto:totales.gB,totalNeto:totales.gN,totalIndexado:totales.gX,
+    elaboradoPor,snap:snapStr
   };
   // API
-  const apiRes=await apiCall('POST','/api/historial',{nip:entrada.nip,nombre:entrada.nombre,años:entrada.años,mes_ejec:entrada.mesEjec,total_bruto:totales.gB,total_neto:totales.gN,total_indexado:totales.gX,snap:snapStr});
+  const apiRes=await apiCall('POST','/api/historial',{nip:entrada.nip,nombre:entrada.nombre,años:entrada.años,mes_ejec:entrada.mesEjec,total_bruto:totales.gB,total_neto:totales.gN,total_indexado:totales.gX,elaborado_por:elaboradoPor,snap:snapStr});
   if(apiRes?.id) entrada.id=apiRes.id;
   // localStorage backup
   let hist=[];try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
@@ -2175,7 +2181,7 @@ function _renderTablaHistorial(cont, hist, origen, histFiltrado, cRama, cFisc){
   wrap.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+histFiltrado.length+' liquidaciones'+(histFiltrado.length!==hist.length?' (filtradas de '+hist.length+')':'')+' | <span style="color:#1e5631;font-weight:600">RAMA: '+cRama+'</span> | <span style="color:#1F3864;font-weight:600">FISCALÍA: '+cFisc+'</span></div>';
   const tbl=document.createElement('table');
   tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
-  tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th class="r">Peso</th><th>Acciones</th></tr></thead>';
+  tbl.innerHTML='<thead><tr><th>Fecha</th><th>Elaboró</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th class="r">Peso</th><th>Acciones</th></tr></thead>';
   const tbody=document.createElement('tbody');
   histFiltrado.forEach((h,i)=>{
     const tr=document.createElement('tr');
@@ -2184,8 +2190,11 @@ function _renderTablaHistorial(cont, hist, origen, histFiltrado, cRama, cFisc){
     const pesoBytes=(h.snap||'').length;
     const pesoLabel=pesoBytes>1024?Math.round(pesoBytes/1024)+'KB':pesoBytes+'B';
     const pesoColor=pesoBytes>100000?'color:#c62828':pesoBytes>50000?'color:#e65100':'color:#2e7d32';
+    const elab=h.elaboradoPor||h.elaborado_por||'';
+    const elaborLabel=elab?elab.split('@')[0]:'—';
     tr.innerHTML=
       '<td style="font-size:11px;white-space:nowrap">'+h.fecha+'</td>'+
+      '<td style="font-size:11px;color:#1e40af" title="'+elab+'">'+elaborLabel+'</td>'+
       '<td><strong>'+(h.nip||'—')+'</strong></td>'+
       '<td>'+(h.nombre||'—')+'</td>'+
       '<td><span class="badge b-az" style="font-size:10px">'+(h.años||'')+'</span></td>'+
@@ -3663,6 +3672,7 @@ async function _sincronizarCargosAPI(){
 // AUTENTICACIÓN CON SUPABASE AUTH
 // ══════════════════════════════════════════════════════════
 let _supaClient=null;
+let _usuarioActual=null; // {email, nombre} del usuario autenticado
 
 async function _getSupaClient(){
   if(_supaClient) return _supaClient;
@@ -3698,6 +3708,8 @@ async function checkSession(){
     if(session){
       if(screen) screen.style.display='none';
       if(btnOut) btnOut.style.display='block';
+      _usuarioActual={email:session.user.email, nombre:session.user.user_metadata?.nombre||session.user.email};
+      _mostrarUsuarioActual();
     }
   }catch(e){
     if(screen) screen.style.display='none';
@@ -3717,6 +3729,8 @@ async function doLogin(){
     if(!client) throw new Error('Sin conexión al servidor');
     const {data,error}=await client.auth.signInWithPassword({email,password:pass});
     if(error) throw error;
+    _usuarioActual={email:data.user.email, nombre:data.user.user_metadata?.nombre||data.user.email};
+    _mostrarUsuarioActual();
     const screen=document.getElementById('login-screen');
     const btnOut=document.getElementById('btn-logout');
     if(screen) screen.style.display='none';
@@ -3734,12 +3748,19 @@ async function doLogin(){
 async function doLogout(){
   if(!confirm('¿Cerrar sesión?')) return;
   try{ const c=await _getSupaClient(); if(c) await c.auth.signOut(); }catch(e){}
+  _usuarioActual=null;
+  _mostrarUsuarioActual();
   const screen=document.getElementById('login-screen');
   const btnOut=document.getElementById('btn-logout');
   if(screen) screen.style.display='flex';
   if(btnOut) btnOut.style.display='none';
   const el=document.getElementById('login-email'); if(el) el.value='';
   const pl=document.getElementById('login-pass'); if(pl) pl.value='';
+}
+
+function _mostrarUsuarioActual(){
+  const el=document.getElementById('usuario-actual-label');
+  if(el) el.textContent=_usuarioActual?('👤 '+_usuarioActual.email):'';
 }
 
 
