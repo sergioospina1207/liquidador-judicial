@@ -4644,12 +4644,101 @@ restaurarSesionLocal();
           </select>
         </div>
         <div class="fg">
-          <label>Año inicio liquidación</label>
+          <label>Mes inicio</label>
+          <select id="ds-mes-ini" onchange="dsBuildLiqGrid()">
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Año inicio</label>
           <select id="ds-anio-ini" onchange="dsBuildLiqGrid()"></select>
         </div>
         <div class="fg">
-          <label>Año fin liquidación</label>
+          <label>Mes fin</label>
+          <select id="ds-mes-fin" onchange="dsBuildLiqGrid()">
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Año fin</label>
           <select id="ds-anio-fin" onchange="dsBuildLiqGrid()"></select>
+        </div>
+      </div>
+      <hr>
+      <!-- Meses de pago por prestación (configurables) -->
+      <div>
+        <p style="font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">📅 Mes de pago por prestación</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">
+          <div class="fg"><label>Bonif. Productividad S1</label>
+            <select id="ds-mes-prod1">
+              <option value="6" selected>Junio</option>
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select></div>
+          <div class="fg"><label>Bonif. Productividad S2</label>
+            <select id="ds-mes-prod2">
+              <option value="12" selected>Diciembre</option>
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option>
+            </select></div>
+          <div class="fg"><label>Bonif. Servicios</label>
+            <select id="ds-mes-serv">
+              <option value="2" selected>Febrero</option>
+              <option value="1">Enero</option><option value="3">Marzo</option><option value="4">Abril</option>
+              <option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option>
+              <option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option>
+              <option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select></div>
+          <div class="fg"><label>Prima Servicios</label>
+            <select id="ds-mes-pserv">
+              <option value="7" selected>Julio</option>
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option>
+              <option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select></div>
+          <div class="fg"><label>Prima Vacaciones</label>
+            <select id="ds-mes-pvac">
+              <option value="12" selected>Diciembre</option>
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option>
+            </select></div>
+          <div class="fg"><label>Sueldo Vacaciones</label>
+            <select id="ds-mes-svac">
+              <option value="12" selected>Diciembre</option>
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option>
+            </select></div>
+          <div class="fg"><label>Vac. Bonif. Judicial</label>
+            <select id="ds-mes-vbj">
+              <option value="12" selected>Diciembre</option>
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option>
+            </select></div>
+          <div class="fg"><label>Prima Navidad</label>
+            <select id="ds-mes-pnav">
+              <option value="12" selected>Diciembre</option>
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option>
+            </select></div>
         </div>
       </div>
     </div>
@@ -4830,6 +4919,22 @@ function dsEjecutoria(){
   const v = document.getElementById('ds-ejecutoria')?.value;
   return v ? new Date(v+'T00:00:00') : null;
 }
+function dsAutoIpc(val){
+  if(!val) return;
+  const d = new Date(val+'T00:00:00');
+  const año = String(d.getFullYear());
+  const mes = DS_MESES_ABREV[d.getMonth()];
+  const row = (typeof ipcData!=='undefined') ? ipcData[año] : null;
+  const ipc = row ? row[mes] : null;
+  const input = document.getElementById('ds-ipc-final');
+  const label = document.getElementById('ds-ipc-mes-label');
+  if(ipc && input){
+    input.value = ipc;
+    if(label) label.textContent = `✅ ${mes}-${año}: ${ipc}`;
+  } else {
+    if(label) label.textContent = `⚠️ Sin dato IPC ${mes}-${año}`;
+  }
+}
 
 // ── 4. Inicialización ─────────────────────────────────────────
 function dsInit(){
@@ -4847,22 +4952,57 @@ function dsInit(){
 
 // ── 5. (decreto table removida del UI — valores fijos en código) ─
 
-// ── 6. Grilla de liquidación mensual ─────────────────────────
-function dsGetAñoRango(){
-  const ini=parseInt(document.getElementById('ds-anio-ini')?.value)||2015;
-  const fin=parseInt(document.getElementById('ds-anio-fin')?.value)||2024;
-  return {ini, fin: Math.max(ini,fin)};
+// ── 6. Rango de períodos ──────────────────────────────────────
+function dsGetRango(){
+  const aIni = parseInt(document.getElementById('ds-anio-ini')?.value)||2015;
+  const aFin = parseInt(document.getElementById('ds-anio-fin')?.value)||2024;
+  const mIni = parseInt(document.getElementById('ds-mes-ini')?.value)||1;
+  const mFin = parseInt(document.getElementById('ds-mes-fin')?.value)||12;
+  return { aIni, aFin: Math.max(aIni,aFin), mIni, mFin };
 }
+// Compatibilidad con código antiguo que usaba dsGetAñoRango
+function dsGetAñoRango(){
+  const r = dsGetRango();
+  return { ini: r.aIni, fin: r.aFin };
+}
+function dsMesInRango(a, m){
+  const {aIni,aFin,mIni,mFin} = dsGetRango();
+  if(a < aIni || a > aFin) return false;
+  if(a === aIni && m < mIni) return false;
+  if(a === aFin && m > mFin) return false;
+  return true;
+}
+// Leer meses configurados por prestación
+function dsMesesPrestacion(){
+  const g = id => parseInt(document.getElementById(id)?.value)||0;
+  return {
+    prod1: g('ds-mes-prod1'), prod2: g('ds-mes-prod2'),
+    serv:  g('ds-mes-serv'),  pserv: g('ds-mes-pserv'),
+    pvac:  g('ds-mes-pvac'),  svac:  g('ds-mes-svac'),
+    vbj:   g('ds-mes-vbj'),   pnav:  g('ds-mes-pnav')
+  };
+}
+
 function dsBuildLiqGrid(){
-  const {ini,fin} = dsGetAñoRango();
+  const {aIni,aFin} = dsGetRango();
   const cont = document.getElementById('ds-liq-container');
   if(!cont) return;
   cont.innerHTML='';
-  for(let a=ini;a<=fin;a++){
+  for(let a=aIni;a<=aFin;a++){
     if(!dsData[a]) dsData[a]={};
+    // Determinar qué meses aplican para este año
+    const meses = [];
+    for(let m=1;m<=12;m++){
+      if(dsMesInRango(a,m)) meses.push(m);
+    }
+    if(!meses.length) continue;
+
     cont.innerHTML += `
     <div class="lxm-year" id="ds-yr-${a}">
-      <div class="lxm-yr-hdr">📅 Vigencia ${a} <span id="ds-yr-${a}-sub" style="margin-left:auto;font-size:12px;font-weight:400;opacity:.8"></span></div>
+      <div class="lxm-yr-hdr">📅 Vigencia ${a}
+        <span style="font-size:11px;font-weight:400;opacity:.7;margin-left:6px">${DS_MESES[meses[0]-1]}–${DS_MESES[meses[meses.length-1]-1]}</span>
+        <span id="ds-yr-${a}-sub" style="margin-left:auto;font-size:12px;font-weight:400;opacity:.8"></span>
+      </div>
       <div class="lxm-body">
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr style="background:#e8edf3">
@@ -4887,32 +5027,32 @@ function dsBuildLiqGrid(){
             <th style="padding:6px 10px;text-align:center;font-size:11px;width:80px">Nota</th>
           </tr></thead>
           <tbody id="ds-tb-${a}">
-            ${DS_MESES.map((mn,mi)=>`
-            <tr id="ds-r-${a}-${mi+1}" style="border-bottom:1px solid #e8edf3">
-              <td style="padding:5px 10px;font-weight:600;white-space:nowrap">${mn} ${a}</td>
+            ${meses.map(m=>`
+            <tr id="ds-r-${a}-${m}" style="border-bottom:1px solid #e8edf3">
+              <td style="padding:5px 10px;font-weight:600;white-space:nowrap">${DS_MESES[m-1]} ${a}</td>
               <td style="padding:4px 6px;text-align:center">
-                <input type="number" id="ds-dias-${a}-${mi+1}" value="${dsData[a][mi+1]?.dias||30}"
+                <input type="number" id="ds-dias-${a}-${m}" value="${dsData[a][m]?.dias??30}"
                   min="0" max="31" style="width:55px;text-align:center;padding:4px;border:1px solid var(--bd);border-radius:4px;font-size:12px"
-                  oninput="dsCalcRow(${a},${mi+1})">
+                  oninput="dsCalcRow(${a},${m})">
               </td>
-              <td class="r" id="ds-c-difS-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-difB-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-prod-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-serv-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-pserv-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-pvac-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-svac-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-vbj-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-pnav-${a}-${mi+1}" style="font-size:11px;font-family:monospace">—</td>
-              <td class="r" id="ds-c-bruto-${a}-${mi+1}" style="font-size:11px;font-family:monospace;font-weight:700">—</td>
-              <td class="r" id="ds-c-ibc-${a}-${mi+1}" style="font-size:11px;font-family:monospace;color:var(--tx2)">—</td>
-              <td class="r" id="ds-c-ded-${a}-${mi+1}" style="font-size:11px;font-family:monospace;color:var(--rj)">—</td>
-              <td class="r" id="ds-c-neto-${a}-${mi+1}" style="font-size:11px;font-family:monospace;font-weight:700">—</td>
-              <td class="r" id="ds-c-ipci-${a}-${mi+1}" style="font-size:11px;font-family:monospace;color:var(--tx2)">—</td>
-              <td class="r" id="ds-c-fac-${a}-${mi+1}" style="font-size:11px;font-family:monospace;color:var(--tx2)">—</td>
-              <td class="r" id="ds-c-idx-${a}-${mi+1}" style="font-size:11px;font-family:monospace;font-weight:700;background:#e8f4ff;color:#1e3a5c">—</td>
+              <td class="r" id="ds-c-difS-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-difB-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-prod-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-serv-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-pserv-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-pvac-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-svac-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-vbj-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-pnav-${a}-${m}" style="font-size:11px;font-family:monospace">—</td>
+              <td class="r" id="ds-c-bruto-${a}-${m}" style="font-size:11px;font-family:monospace;font-weight:700">—</td>
+              <td class="r" id="ds-c-ibc-${a}-${m}" style="font-size:11px;font-family:monospace;color:var(--tx2)">—</td>
+              <td class="r" id="ds-c-ded-${a}-${m}" style="font-size:11px;font-family:monospace;color:var(--rj)">—</td>
+              <td class="r" id="ds-c-neto-${a}-${m}" style="font-size:11px;font-family:monospace;font-weight:700">—</td>
+              <td class="r" id="ds-c-ipci-${a}-${m}" style="font-size:11px;font-family:monospace;color:var(--tx2)">—</td>
+              <td class="r" id="ds-c-fac-${a}-${m}" style="font-size:11px;font-family:monospace;color:var(--tx2)">—</td>
+              <td class="r" id="ds-c-idx-${a}-${m}" style="font-size:11px;font-family:monospace;font-weight:700;background:#e8f4ff;color:#1e3a5c">—</td>
               <td style="padding:4px 6px">
-                <input type="text" id="ds-nota-${a}-${mi+1}" placeholder="—"
+                <input type="text" id="ds-nota-${a}-${m}" placeholder="—"
                   style="width:75px;padding:3px 5px;border:1px solid var(--bd);border-radius:4px;font-size:11px">
               </td>
             </tr>`).join('')}
@@ -4920,7 +5060,7 @@ function dsBuildLiqGrid(){
           <tfoot>
             <tr style="background:#1a3a5c;color:#fff;font-weight:700">
               <td style="padding:6px 10px">Subtotal ${a}</td>
-              <td id="ds-st-dias-${a}" class="r" colspan="1" style="text-align:center"></td>
+              <td id="ds-st-dias-${a}" style="text-align:center;padding:6px 10px"></td>
               <td id="ds-st-difS-${a}" class="r" style="font-size:11px;font-family:monospace"></td>
               <td id="ds-st-difB-${a}" class="r" style="font-size:11px;font-family:monospace"></td>
               <td id="ds-st-prod-${a}" class="r" style="font-size:11px;font-family:monospace"></td>
@@ -4949,28 +5089,22 @@ function dsCalcRow(a, m){
   const dec = dsGetDecrees();
   const ipcFinal = dsIpcFinal();
   if(!dec[a]||!ipcFinal) return;
+  if(!dsMesInRango(a,m)) return; // fuera del período seleccionado
 
+  const mp = dsMesesPrestacion(); // meses configurados por prestación
   const dias = parseFloat(document.getElementById(`ds-dias-${a}-${m}`)?.value)||0;
   const [dS,gS,dB,gB] = dec[a];
-  const difSMes = (dS-gS)*dias/30;          // diferencia salario proporcional al mes
-  const difBMes = (dB-gB)*dias/30;          // diferencia bonificación judicial proporcional
+  const difSMes = (dS-gS)*dias/30;
+  const difBMes = (dB-gB)*dias/30;
 
-  // Prestaciones que se causan en meses específicos:
-  const bonifProd = (m===6||m===12) ? (dS-gS)*0.5*dias/30 : 0;   // Bonif.Productividad 50% base dif (jun/dic)
-  // Bonif.Servicios: 35% (salario + gastos rep) dif — se causa feb (pagadera feb, pero reflejada mensual en el Excel es solo en feb). Revisando el Excel: solo aparece en febrero. Replicamos eso:
-  const difGR = (dS-gS)*0.5; // gastos representación = 50% diferencia salario
-  const bonifServ = (m===2) ? ((dS-gS)+(dS-gS)*0.5)*0.35*dias/30 : 0;
-  // Prima Servicios: sal/30*15, pagadera julio (mes 7)
-  const primaServ = (m===7) ? (dS-gS)/30*15 : 0;
-  // Prima Vacaciones: base/30*15, pagadera diciembre
-  const primaVac = (m===12) ? (dS-gS)/30*15*dias/30 : 0;  // proporcional en diciembre
-  // Sueldo Vacaciones: en diciembre proporcional
-  const sueldoVac = (m===12) ? (dS-gS)/30*15*dias/30 : 0;
-  // Vac.Bonif.Judicial: (dB-dB pagado)/30 * días vacaciones — aprox igual a sueldo vac pero sobre bonif
-  const vacBonif = (m===12) ? (dB-gB)/30*15*dias/30 : 0;
-  // Prima Navidad: compleja — aprox 1/12 de todas las primas anuales + salario dic / fórmula simplificada
-  // Usamos la fórmula del Excel de referencia: en diciembre incluye primas acumuladas
-  const primaNav = (m===12) ? dsCalcPrimaNav(a, dias) : 0;
+  // Prestaciones según mes configurado
+  const bonifProd = (m===mp.prod1||m===mp.prod2) ? (dS-gS)*0.5*dias/30 : 0;
+  const bonifServ = (m===mp.serv)  ? ((dS-gS)+(dS-gS)*0.5)*0.35*dias/30 : 0;
+  const primaServ = (m===mp.pserv) ? (dS-gS)/30*15 : 0;
+  const primaVac  = (m===mp.pvac)  ? (dS-gS)/30*15*dias/30 : 0;
+  const sueldoVac = (m===mp.svac)  ? (dS-gS)/30*15*dias/30 : 0;
+  const vacBonif  = (m===mp.vbj)   ? (dB-gB)/30*15*dias/30 : 0;
+  const primaNav  = (m===mp.pnav)  ? dsCalcPrimaNav(a, dias) : 0;
 
   const bruto = difSMes + difBMes + bonifProd + bonifServ + primaServ + primaVac + sueldoVac + vacBonif + primaNav;
 
@@ -5032,19 +5166,10 @@ function dsCalcPrimaNav(a, dias){
 function dsCalcAll(){
   const ipcFinal = dsIpcFinal();
   if(!ipcFinal){ alert('Ingrese el IPC del mes de ejecutoria primero.'); return; }
-  const {ini,fin} = dsGetAñoRango();
-  const presc = dsPrescripcion();
-  for(let a=ini;a<=fin;a++){
+  const {aIni,aFin} = dsGetRango();
+  for(let a=aIni;a<=aFin;a++){
     for(let m=1;m<=12;m++){
-      // Verificar si el mes es posterior a prescripción
-      if(presc){
-        const fechaMes = new Date(a, m-1, 1);
-        if(fechaMes < new Date(presc.getFullYear(), presc.getMonth(), 1)){
-          // Mes anterior a prescripción: poner días 0
-          const el = document.getElementById(`ds-dias-${a}-${m}`);
-          if(el && el.value==='30') el.value='0';
-        }
-      }
+      if(!dsMesInRango(a,m)) continue;
       dsCalcRow(a,m);
     }
     dsUpdateYearSubtotal(a);
@@ -5057,7 +5182,11 @@ function dsCalcAll(){
 }
 
 function dsUpdateYearSubtotal(a){
-  const meses = Object.values(dsData[a]||{});
+  // Solo sumar meses que están en el rango seleccionado
+  const entries = Object.entries(dsData[a]||{})
+    .filter(([m])=>dsMesInRango(a,parseInt(m)))
+    .map(([,v])=>v);
+  const meses = entries;
   const sum=(k)=>meses.reduce((s,r)=>s+(r[k]||0),0);
   const st=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=dsFmt(v);};
   st(`ds-st-dias-${a}`, meses.reduce((s,r)=>s+(r.dias||0),0));
@@ -5147,120 +5276,180 @@ function dsCesNomChange(a,v){
 // ── 10. Resumen ───────────────────────────────────────────────
 function dsUpdateResumen(){
   const ipcFinal = dsIpcFinal();
-  const {ini,fin} = dsGetAñoRango();
+  const {aIni,aFin} = dsGetRango();
   const cont = document.getElementById('ds-resumen-container');
   if(!cont) return;
 
-  let totalBruto=0, totalDed=0, totalNeto=0, totalIdx=0;
-  let totalCesIdx=0, totalIntIdx=0;
+  let totalBruto=0,totalDed=0,totalNeto=0,totalIdx=0;
+  let totalCesIdx=0,totalIntIdx=0;
   const vigResumen=[];
 
-  for(let a=ini;a<=fin;a++){
-    const meses=Object.values(dsData[a]||{});
-    if(!meses.some(r=>r.dias>0)) continue;
-    const sum=(k)=>meses.reduce((s,r)=>s+(r[k]||0),0);
-    const bruto=sum('bruto'), ded=sum('ded'), neto=sum('neto'), idx=sum('totalIdx');
-    totalBruto+=bruto; totalDed+=ded; totalNeto+=neto; totalIdx+=idx;
+  for(let a=aIni;a<=aFin;a++){
+    const allMeses = Object.entries(dsData[a]||{})
+      .filter(([m])=>dsMesInRango(a,parseInt(m))).map(([,v])=>v);
+    if(!allMeses.some(r=>r.dias>0)) continue;
+    const sum=(k)=>allMeses.reduce((s,r)=>s+(r[k]||0),0);
 
-    // Cesantías para este año
-    const cesEl = document.getElementById(`ds-ces-nom-${a}`);
-    const cesNom = cesEl ? parseFloat(cesEl.value)||0 : 0;
-    const intNom = cesNom*0.12;
-    const ipcCesIni=dsIpc(a+1,2), ipcIntIni=dsIpc(a+1,1);
+    const bruto=sum('bruto'),ded=sum('ded'),neto=sum('neto'),idx=sum('totalIdx');
+    const difS=sum('difSMes'),difB=sum('difBMes');
+    const prod=sum('bonifProd'),serv=sum('bonifServ'),pserv=sum('primaServ');
+    const pvac=sum('primaVac'),svac=sum('sueldoVac'),vbj=sum('vacBonif'),pnav=sum('primaNav');
+    totalBruto+=bruto;totalDed+=ded;totalNeto+=neto;totalIdx+=idx;
+
+    // Cesantías
+    const cesEl=document.getElementById(`ds-ces-nom-${a}`);
+    const cesNom=cesEl?parseFloat(cesEl.value)||0:0;
+    const intNom=cesNom*0.12;
+    const ipcCesIni=dsIpc(a+1,2),ipcIntIni=dsIpc(a+1,1);
     const facCes=(ipcCesIni&&ipcFinal)?ipcFinal/ipcCesIni:null;
     const facInt=(ipcIntIni&&ipcFinal)?ipcFinal/ipcIntIni:null;
     const cesIdx=facCes?cesNom*facCes:0;
     const intIdx=facInt?intNom*facInt:0;
-    totalCesIdx+=cesIdx; totalIntIdx+=intIdx;
+    totalCesIdx+=cesIdx;totalIntIdx+=intIdx;
 
-    vigResumen.push({a,bruto,ded,neto,idx,cesIdx,intIdx,totalVig:idx+cesIdx+intIdx,meses:meses.filter(r=>r.dias>0).length});
+    const mesActivos=allMeses.filter(r=>r.dias>0).length;
+    vigResumen.push({a,bruto,ded,neto,idx,difS,difB,prod,serv,pserv,pvac,svac,vbj,pnav,
+      cesNom,intNom,ipcCesIni,ipcIntIni,facCes,facInt,cesIdx,intIdx,
+      totalVig:idx+cesIdx+intIdx,meses:mesActivos});
   }
 
-  const totalGeneral = totalIdx + totalCesIdx + totalIntIdx;
-  const nombre = document.getElementById('ds-nombre')?.value||'(sin nombre)';
-  const prescStr = document.getElementById('ds-prescripcion')?.value||'';
-  const ejStr = document.getElementById('ds-ejecutoria')?.value||'';
-  const turnoStr = document.getElementById('ds-turno')?.value||'';
+  const totalGeneral=totalIdx+totalCesIdx+totalIntIdx;
+  const prescStr=document.getElementById('ds-prescripcion')?.value||'';
+  const ejStr=document.getElementById('ds-ejecutoria')?.value||'';
+  const turnoStr=document.getElementById('ds-turno')?.value||'';
 
-  cont.innerHTML = `
-  <div style="padding:22px;max-width:1200px;margin:0 auto">
-    <!-- Resumen general -->
-    <div class="rcards" style="margin-bottom:24px">
-      <div class="rc az"><div class="rl">Total Bruto Diferencias</div><div class="rv">${dsFmt(totalBruto)}</div></div>
-      <div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">${dsFmt(totalDed)}</div></div>
-      <div class="rc vd"><div class="rl">NETO Diferencias</div><div class="rv">${dsFmt(totalNeto)}</div></div>
-      <div class="rc or"><div class="rl">NETO INDEXADO (Capital)</div><div class="rv">${dsFmt(totalIdx)}</div></div>
-      <div class="rc" style="background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7"><div class="rl">↳ Cesantías indexadas</div><div class="rv">${dsFmt(totalCesIdx)}</div></div>
-      <div class="rc" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc"><div class="rl">↳ Int. Cesantías indexados</div><div class="rv">${dsFmt(totalIntIdx)}</div></div>
-      <div class="rc" style="background:#1a3a5c;color:#fff;border:2px solid #2563a8"><div class="rl">TOTAL INDEXADO LIQUIDACIÓN</div><div class="rv" style="font-size:22px">${dsFmt(totalGeneral)}</div></div>
+  // Tarjetas resumen
+  const cards=`
+  <div class="rcards" style="margin-bottom:20px">
+    <div class="rc az"><div class="rl">Bruto diferencias</div><div class="rv">${dsFmt(totalBruto)}</div></div>
+    <div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">${dsFmt(totalDed)}</div></div>
+    <div class="rc vd"><div class="rl">NETO diferencias</div><div class="rv">${dsFmt(totalNeto)}</div></div>
+    <div class="rc or"><div class="rl">NETO INDEXADO capital</div><div class="rv">${dsFmt(totalIdx)}</div></div>
+    <div class="rc" style="background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7"><div class="rl">Cesantías indexadas</div><div class="rv">${dsFmt(totalCesIdx)}</div></div>
+    <div class="rc" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc"><div class="rl">Int. cesantías indexados</div><div class="rv">${dsFmt(totalIntIdx)}</div></div>
+    <div class="rc" style="background:#1a3a5c;color:#fff"><div class="rl">TOTAL INDEXADO</div><div class="rv" style="font-size:20px">${dsFmt(totalGeneral)}</div></div>
+  </div>`;
+
+  // Tabla detallada año a año
+  const tablaAnual = vigResumen.map(v=>`
+  <div class="card" style="margin-bottom:14px">
+    <div style="background:#1a3a5c;color:#fff;padding:9px 16px;font-weight:700;font-size:13px;display:flex;align-items:center;gap:10px">
+      📅 Vigencia ${v.a}
+      <span style="font-weight:400;font-size:11px;opacity:.8">${v.meses} mes(es) activos</span>
+      <span style="margin-left:auto;font-family:monospace">TOTAL IDX: ${dsFmt(v.totalVig)}</span>
     </div>
+    <div style="padding:0">
+      <!-- I. Diferencias salariales y prestacionales -->
+      <div style="padding:10px 16px 4px;font-size:11px;font-weight:700;color:var(--az2);text-transform:uppercase;letter-spacing:.3px">I. Diferencias salariales y prestacionales causadas</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tbody>
+          <tr style="border-bottom:1px solid #e8edf3">
+            <td style="padding:5px 16px;color:var(--tx2)">Dif. Salario mensual</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.difS)}</td>
+            <td style="padding:5px 16px;color:var(--tx2)">Dif. Bonif. Judicial mensual</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.difB)}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #e8edf3">
+            <td style="padding:5px 16px;color:var(--tx2)">Bonif. Productividad (S1+S2)</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.prod)}</td>
+            <td style="padding:5px 16px;color:var(--tx2)">Bonif. Servicios</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.serv)}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #e8edf3">
+            <td style="padding:5px 16px;color:var(--tx2)">Prima Servicios</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.pserv)}</td>
+            <td style="padding:5px 16px;color:var(--tx2)">Prima Vacaciones</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.pvac)}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #e8edf3">
+            <td style="padding:5px 16px;color:var(--tx2)">Sueldo Vacaciones</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.svac)}</td>
+            <td style="padding:5px 16px;color:var(--tx2)">Vac. Bonif. Judicial</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.vbj)}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #e8edf3">
+            <td style="padding:5px 16px;color:var(--tx2)">Prima Navidad</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.pnav)}</td>
+            <td></td><td></td>
+          </tr>
+          <tr style="background:#f4f6f9">
+            <td style="padding:6px 16px;font-weight:700">BRUTO</td>
+            <td class="r mono" style="padding:6px 16px;font-weight:700">${dsFmt(v.bruto)}</td>
+            <td style="padding:6px 16px;color:var(--rj)">Deducciones 9%</td>
+            <td class="r mono" style="padding:6px 16px;color:var(--rj)">(${dsFmt(v.ded)})</td>
+          </tr>
+          <tr style="background:#e8f0ff">
+            <td style="padding:6px 16px;font-weight:700;color:var(--az2)">NETO</td>
+            <td class="r mono" style="padding:6px 16px;font-weight:700;color:var(--az2)">${dsFmt(v.neto)}</td>
+            <td style="padding:6px 16px;font-weight:700;color:var(--az2)">NETO INDEXADO</td>
+            <td class="r mono" style="padding:6px 16px;font-weight:700;color:var(--az2)">${dsFmt(v.idx)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <!-- II. Cesantías e intereses (causados este año, pagados año siguiente) -->
+      <div style="padding:10px 16px 4px;font-size:11px;font-weight:700;color:var(--vd);text-transform:uppercase;letter-spacing:.3px">II. Cesantías e intereses — causados ${v.a}, pagaderos ${v.a+1}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tbody>
+          <tr style="border-bottom:1px solid #e8edf3">
+            <td style="padding:5px 16px;color:var(--tx2)">Cesantías nominales</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.cesNom)}</td>
+            <td style="padding:5px 16px;color:var(--tx2)">IPC Feb-${v.a+1}</td>
+            <td class="r mono" style="padding:5px 16px">${v.ipcCesIni?dsFmtN(v.ipcCesIni):'—'}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #e8edf3">
+            <td style="padding:5px 16px;color:var(--tx2)">Intereses nominales (12%)</td>
+            <td class="r mono" style="padding:5px 16px">${dsFmt(v.intNom)}</td>
+            <td style="padding:5px 16px;color:var(--tx2)">IPC Ene-${v.a+1}</td>
+            <td class="r mono" style="padding:5px 16px">${v.ipcIntIni?dsFmtN(v.ipcIntIni):'—'}</td>
+          </tr>
+          <tr style="background:#e6f4f0">
+            <td style="padding:6px 16px;font-weight:700;color:var(--vd)">Cesantías indexadas</td>
+            <td class="r mono" style="padding:6px 16px;font-weight:700;color:var(--vd)">${dsFmt(v.cesIdx)}</td>
+            <td style="padding:6px 16px;font-weight:700;color:var(--vd)">Intereses indexados</td>
+            <td class="r mono" style="padding:6px 16px;font-weight:700;color:var(--vd)">${dsFmt(v.intIdx)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <!-- Total vigencia -->
+      <div style="background:#0f2744;color:#fff;padding:8px 16px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;font-weight:700">TOTAL INDEXADO VIGENCIA ${v.a} (capital + cesantías + intereses)</span>
+        <span style="font-family:monospace;font-weight:700;font-size:14px">${dsFmt(v.totalVig)}</span>
+      </div>
+    </div>
+  </div>`).join('');
 
-    <!-- Datos proceso -->
-    <div class="card" style="margin-bottom:18px">
+  cont.innerHTML = `<div style="padding:22px;max-width:1200px;margin:0 auto">
+    ${cards}
+    <div class="card" style="margin-bottom:14px">
       <div class="ch">📋 Datos del Proceso</div>
       <div class="cb" style="font-size:13px;line-height:1.9">
-        <strong>Demandante:</strong> ${document.getElementById('ds-nombre')?.value||'—'}<br>
+        <strong>Demandante:</strong> ${document.getElementById('ds-nombre')?.value||'—'} &nbsp;|&nbsp;
         <strong>Radicado:</strong> ${document.getElementById('ds-radicado')?.value||'—'}<br>
         <strong>Demandados:</strong> ${document.getElementById('ds-demandados')?.value||'—'}<br>
         <strong>Objeto:</strong> ${document.getElementById('ds-objeto')?.value||'—'}<br>
         <strong>Prescripción:</strong> ${prescStr||'—'} &nbsp;|&nbsp;
         <strong>Ejecutoria:</strong> ${ejStr||'—'} &nbsp;|&nbsp;
-        <strong>Turno:</strong> ${turnoStr||'—'}<br>
-        <strong>IPC final (ejecutoria):</strong> ${ipcFinal||'—'}
+        <strong>Turno:</strong> ${turnoStr||'—'} &nbsp;|&nbsp;
+        <strong>IPC ejecutoria:</strong> ${ipcFinal||'—'}
       </div>
     </div>
-
-    <!-- Tabla resumen por vigencia -->
+    ${tablaAnual}
     <div class="card">
-      <div class="ch">📊 Resumen por Vigencia</div>
+      <div class="ch">📋 Resumen General</div>
       <div class="cb">
-        <div class="tw"><table>
-          <thead><tr>
-            <th>Vigencia</th><th class="r">Meses</th>
-            <th class="r">Bruto diferencias</th><th class="r">Deducciones</th>
-            <th class="r">Neto diferencias</th><th class="r">Diferencias indexadas</th>
-            <th class="r">Ces. e Int. indexados</th><th class="r">TOTAL INDEXADO VIGENCIA</th>
-          </tr></thead>
-          <tbody>
-            ${vigResumen.map(v=>`<tr>
-              <td><strong>${v.a}</strong></td>
-              <td class="r">${v.meses}</td>
-              <td class="r mono">${dsFmt(v.bruto)}</td>
-              <td class="r mono" style="color:var(--rj)">${dsFmt(v.ded)}</td>
-              <td class="r mono">${dsFmt(v.neto)}</td>
-              <td class="r mono" style="color:var(--az2)">${dsFmt(v.idx)}</td>
-              <td class="r mono" style="color:var(--vd)">${dsFmt(v.cesIdx+v.intIdx)}</td>
-              <td class="r mono" style="font-weight:700;background:#e8f4ff">${dsFmt(v.totalVig)}</td>
-            </tr>`).join('')}
-          </tbody>
-          <tfoot><tr class="tot">
-            <td>TOTAL</td>
-            <td class="r">${vigResumen.reduce((s,v)=>s+v.meses,0)}</td>
-            <td class="r mono">${dsFmt(totalBruto)}</td>
-            <td class="r mono">${dsFmt(totalDed)}</td>
-            <td class="r mono">${dsFmt(totalNeto)}</td>
-            <td class="r mono">${dsFmt(totalIdx)}</td>
-            <td class="r mono">${dsFmt(totalCesIdx+totalIntIdx)}</td>
-            <td class="r mono" style="background:#0f2744">${dsFmt(totalGeneral)}</td>
-          </tr></tfoot>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- Resumen general final -->
-    <div class="card">
-      <div class="ch">📋 Resumen General de la Liquidación</div>
-      <div class="cb">
-        <table style="width:100%;max-width:600px">
-          <tr><td style="padding:8px 4px">Total indexado – diferencias salariales (capital)</td><td class="r mono" style="font-weight:700">${dsFmt(totalIdx)}</td></tr>
-          <tr><td style="padding:8px 4px">Total indexado – cesantías e intereses</td><td class="r mono" style="font-weight:700">${dsFmt(totalCesIdx+totalIntIdx)}</td></tr>
-          <tr style="border-top:2px solid var(--az)"><td style="padding:10px 4px;font-weight:700;font-size:15px">TOTAL INDEXADO DE LA LIQUIDACIÓN</td>
-            <td class="r mono" style="font-weight:700;font-size:18px;color:var(--az2)">${dsFmt(totalGeneral)}</td></tr>
+        <table style="width:100%;max-width:620px">
+          <tr><td style="padding:7px 4px">Total indexado – diferencias salariales (capital)</td>
+              <td class="r mono" style="font-weight:700">${dsFmt(totalIdx)}</td></tr>
+          <tr><td style="padding:7px 4px">Total indexado – cesantías e intereses a las cesantías</td>
+              <td class="r mono" style="font-weight:700">${dsFmt(totalCesIdx+totalIntIdx)}</td></tr>
+          <tr style="border-top:2px solid var(--az)">
+            <td style="padding:10px 4px;font-weight:700;font-size:15px">TOTAL INDEXADO DE LA LIQUIDACIÓN</td>
+            <td class="r mono" style="font-weight:700;font-size:18px;color:var(--az2)">${dsFmt(totalGeneral)}</td>
+          </tr>
         </table>
-        <p style="font-size:11px;color:var(--tx2);margin-top:10px">Nota: valores en pesos colombianos. Los intereses moratorios posteriores a la ejecutoria (arts. 192 y 195 CPACA) no hacen parte de este total.</p>
+        <p style="font-size:11px;color:var(--tx2);margin-top:10px">Los intereses moratorios posteriores a la ejecutoria (arts. 192 y 195 CPACA) no hacen parte de este total.</p>
       </div>
     </div>
-
     <div class="bgrp no-print">
       <button class="btn btn-p" onclick="dsExportExcel()">📥 Exportar Excel completo</button>
       <button class="btn btn-o" onclick="window.print()">🖨️ Imprimir / PDF</button>
