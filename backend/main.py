@@ -43,6 +43,7 @@ class HistorialEntry(BaseModel):
     total_bruto: float
     total_neto: float
     total_indexado: float
+    elaborado_por: Optional[str] = None
     snap: str
 
 class CargoUpdate(BaseModel):
@@ -103,6 +104,7 @@ async def save_historial(entry: HistorialEntry):
             "total_bruto": entry.total_bruto,
             "total_neto": entry.total_neto,
             "total_indexado": entry.total_indexado,
+            "elaborado_por": entry.elaborado_por or "",
             "snap": snap,
             "created_at": datetime.utcnow().isoformat()
         }
