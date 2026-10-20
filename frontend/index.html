@@ -2065,7 +2065,9 @@ function generarResumen(){
     cont.appendChild(cesCard);
   }
 
-  _guardarHistorial({gB,gN,gX,modo:state.resolucion?'resolucion':'normal'});
+  if(!state._cargandoHist){
+    _guardarHistorial({gB,gN,gX,modo:state.resolucion?'resolucion':'normal'});
+  }
 }
 
 
@@ -2123,10 +2125,34 @@ function _marcarCambio(){
 async function _guardarHistorial(totales){
   const ahora=new Date();
   const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clientePrescripcion:state.clientePrescripcion||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',clienteIngresoAnterior:state.clienteIngresoAnterior||'',años:state.años,lxm:state.lxm,mesesPagoAnual:state.mesesPagoAnual||{},selectorPrestAnual:state.selectorPrestAnual||{},mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false,proporcional:state.proporcional||false,honPct:state.honPct||30,honIVA:state.honIVA||'asume'});
+
+  // Verificar si ya existe un registro con el mismo NIP y mismos totales
+  let hist=[];try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
+  const nipActual=state.clienteNIP||'(sin NIP)';
+  const duplicado=hist.find(h=>
+    (h.nip===nipActual) &&
+    (h.totalBruto||h.total_bruto||0)===totales.gB &&
+    (h.totalNeto||h.total_neto||0)===totales.gN &&
+    (h.totalIndexado||h.total_indexado||0)===totales.gX
+  );
+  if(duplicado){
+    const reescribir=confirm('Ya existe una liquidación de '+(state.clienteNombre||nipActual)+' con los mismos valores.\n¿Desea reemplazar el registro existente?');
+    if(!reescribir){
+      state._hashResumen=_hashState();
+      return; // No guardar duplicado
+    }
+    // Eliminar el duplicado antes de guardar el nuevo
+    hist=hist.filter(h=>h.id!==duplicado.id);
+    localStorage.setItem('liq_hist',JSON.stringify(hist));
+    if(duplicado._api||duplicado.id>1000000000000){
+      try{await apiCall('DELETE','/api/historial/'+duplicado.id);}catch(e){}
+    }
+  }
+
   const entrada={
     id:Date.now(),
     fecha:ahora.toLocaleDateString('es-CO')+' '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
-    nip:state.clienteNIP||'(sin NIP)',nombre:state.clienteNombre||'(sin nombre)',
+    nip:nipActual, nombre:state.clienteNombre||'(sin nombre)',
     años:[...state.años].sort((a,b)=>a-b).join(', '),mesEjec:state.mesEjec+' '+state.añoEjec,
     totalBruto:totales.gB,totalNeto:totales.gN,totalIndexado:totales.gX,snap:snapStr
   };
@@ -2134,7 +2160,6 @@ async function _guardarHistorial(totales){
   const apiRes=await apiCall('POST','/api/historial',{nip:entrada.nip,nombre:entrada.nombre,años:entrada.años,mes_ejec:entrada.mesEjec,total_bruto:totales.gB,total_neto:totales.gN,total_indexado:totales.gX,snap:snapStr});
   if(apiRes?.id) entrada.id=apiRes.id;
   // localStorage backup
-  let hist=[];try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
   hist.unshift(entrada);if(hist.length>100)hist=hist.slice(0,100);
   localStorage.setItem('liq_hist',JSON.stringify(hist));
   state._hashResumen=_hashState();
@@ -2360,14 +2385,16 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
     buildLxM();
     // Si tiene meses de pago guardados, recalcular automáticamente
     if(s.mesesPagoAnual&&Object.keys(s.mesesPagoAnual).length){
+      state._cargandoHist=true;
       calcularTodo();
+      state._cargandoHist=false;
       showTab('tab-ps');
       alert('✅ '+nombre+' cargado con configuración completa. Revise las Prestaciones Sociales.');
     } else {
       showTab('tab-lxm');
       alert('✅ '+nombre+' cargado. Revise el Liquidador por Mes y presione Calcular.');
     }
-  }catch(e){alert('Error: '+e.message);}
+  }catch(e){state._cargandoHist=false;alert('Error: '+e.message);}
 }
 async function _informeDesdeSnap(snap){
   // Restaura el snap en el state silenciosamente y genera el informe técnico
@@ -2392,8 +2419,10 @@ async function _informeDesdeSnap(snap){
     const añoEjecEl=document.getElementById('r-añoEjec');
     if(añoEjecEl) añoEjecEl.value=state.añoEjec;
     try{onEjecChange();}catch(e){}
-    // Recalcular para tener los totales frescos
+    // Recalcular para tener los totales frescos (sin guardar en historial)
+    state._cargandoHist=true;
     calcularTodo();
+    state._cargandoHist=false;
     // Pequeño delay para que los cálculos terminen antes de exportar
     setTimeout(()=>exportarInforme(), 400);
   }catch(e){alert('Error generando informe: '+e.message);}
