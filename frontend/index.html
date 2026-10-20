@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Liquidador Bonificación Judicial</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 :root{
@@ -172,13 +171,8 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
     <h1>Liquidador Master</h1>
     <p>By Sergio Ospina · Rama Judicial & Fiscalía General de la Nación</p>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
-    <span id="usuario-actual-label" style="font-size:12px;color:#93c5fd;font-weight:500"></span>
-    <button id="btn-logout" onclick="doLogout()" style="display:none;background:#1e3a5f;color:#fff;border:1px solid #3b82f6;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">🚪 Salir</button>
-  </div>
 </div>
 
-<div id="modulo-bj">
 <div class="tabs">
   <div class="tab active" onclick="showTab('tab-lxm')">📅 Liquidador por Mes</div>
   <div class="tab" onclick="showTab('tab-cargos')">🗂️ Tabla de Cargos</div>
@@ -188,19 +182,6 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
   <div class="tab" onclick="showTab('tab-int')">⚖️ Intereses Moratorios</div>
   <div class="tab" onclick="showTab('tab-tasas')">📉 Tasas DTF / Corriente</div>
   <div class="tab" onclick="showTab('tab-historial')">🗂️ Historial</div>
-</div>
-
-<!-- ════════════════════════════════════════════════════════
-     SELECTOR DE LIQUIDADOR — barra superior del módulo DS
-════════════════════════════════════════════════════════ -->
-<div id="liq-selector-bar" style="background:#0f2744;padding:8px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-  <span style="color:#93c5fd;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">MÓDULO:</span>
-  <button id="sel-bj" onclick="setModulo('bj')"
-    style="padding:5px 16px;border-radius:20px;border:none;font-size:12px;font-weight:700;cursor:pointer;
-           background:#2563a8;color:#fff;transition:.15s">⚖️ Bonificación Judicial</button>
-  <button id="sel-ds" onclick="setModulo('ds')"
-    style="padding:5px 16px;border-radius:20px;border:2px solid #2563a8;font-size:12px;font-weight:700;cursor:pointer;
-           background:transparent;color:#93c5fd;transition:.15s">📊 Diferencias Salariales</button>
 </div>
 
 <!-- ═══════════════════════════════════════════════════
@@ -1804,8 +1785,7 @@ function generarResumen(){
     '</div>'+
     '<div class="cb no-print" style="padding:8px 14px;display:flex;gap:8px">'+
     '<button class="btn btn-xs btn-o" onclick="window.print()">&#128438; Imprimir</button>'+
-    '<button class="btn btn-xs btn-o" onclick="exportarCSV()">&#128229; CSV</button> <button class="btn btn-xs btn-s" onclick="exportarExcel()">&#128202; Excel</button> <button class="btn btn-xs btn-s" onclick="exportarPDF()">&#128438; PDF</button> <button class="btn btn-xs btn-o" onclick="exportarResumenPersonal()">&#128196; Respaldo</button>'+
-    '<button id="btn-informe-tec" class="btn btn-xs" onclick="exportarInforme()" style="background:#4a4a4a;color:#fff;border:1px solid #777">&#128196; Inf. T&eacute;cnico</button></div>'+
+    '<button class="btn btn-xs btn-o" onclick="exportarCSV()">&#128229; CSV</button> <button class="btn btn-xs btn-s" onclick="exportarExcel()">&#128202; Excel</button> <button class="btn btn-xs btn-s" onclick="exportarPDF()">&#128438; PDF</button> <button class="btn btn-xs btn-o" onclick="exportarResumenPersonal()">&#128196; Respaldo</button></div>'+
     '<div class="cb" style="padding:0"><div class="tw"></div></div>';
   cont.appendChild(card);
   const tw=card.querySelector('.tw');
@@ -1997,20 +1977,29 @@ function generarResumen(){
 
   tbl.appendChild(tbody);tw.appendChild(tbl);
 
-  // Cards resumen — siempre muestra desglose prestaciones/cesantías/int.cesantías
+  // Cards resumen — solo bruto, deducciones, neto, indexado
   const rc=document.createElement('div');rc.className='rcards';
-  rc.innerHTML=
-    '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
-    '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
-    '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
-    '<div class="rc or"><div class="rl">NETO INDEXADO</div><div class="rv">$'+fmt(gX)+'</div>'+
-      '<div class="rs">Diferencia indexación: $'+fmt(dif)+'</div></div>'+
-    '<div class="rc" style="background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7"><div class="rl" style="color:#065f46">↳ Prestaciones Principales</div>'+
-      '<div class="rv" style="color:#065f46">$'+fmt(gX_prest)+'</div></div>'+
-    '<div class="rc" style="background:#ccfbf1;color:#0f766e;border:1.5px solid #5eead4"><div class="rl" style="color:#0f766e">↳ Cesantías (indexadas)</div>'+
-      '<div class="rv" style="color:#0f766e">$'+fmt(gX_ces)+'</div></div>'+
-    '<div class="rc" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc"><div class="rl" style="color:#0369a1">↳ Int. Cesantías (indexados)</div>'+
-      '<div class="rv" style="color:#0369a1">$'+fmt(gX_intCes)+'</div></div>';
+  if(state.resolucion){
+    rc.innerHTML=
+      '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
+      '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
+      '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
+      '<div class="rc or"><div class="rl">NETO INDEXADO (Total)</div><div class="rv">$'+fmt(gX)+'</div>'+
+        '<div class="rs">Diferencia indexación: $'+fmt(dif)+'</div></div>'+
+      '<div class="rc" style="background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7"><div class="rl" style="color:#065f46">↳ Prestaciones Principales</div>'+
+        '<div class="rv" style="color:#065f46">$'+fmt(gX_prest)+'</div></div>'+
+      '<div class="rc" style="background:#ccfbf1;color:#0f766e;border:1.5px solid #5eead4"><div class="rl" style="color:#0f766e">↳ Cesantías (indexadas)</div>'+
+        '<div class="rv" style="color:#0f766e">$'+fmt(gX_ces)+'</div></div>'+
+      '<div class="rc" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc"><div class="rl" style="color:#0369a1">↳ Int. Cesantías (indexados)</div>'+
+        '<div class="rv" style="color:#0369a1">$'+fmt(gX_intCes)+'</div></div>';
+  } else {
+    rc.innerHTML=
+      '<div class="rc az"><div class="rl">Total Bruto</div><div class="rv">$'+fmt(gB)+'</div></div>'+
+      '<div class="rc g2"><div class="rl">Deducciones 9%</div><div class="rv">$'+fmt(gD)+'</div></div>'+
+      '<div class="rc vd"><div class="rl">NETO</div><div class="rv">$'+fmt(gN)+'</div></div>'+
+      '<div class="rc or"><div class="rl">NETO INDEXADO</div><div class="rv">$'+fmt(gX)+'</div>'+
+      '<div class="rs">Diferencia indexación: $'+fmt(dif)+'</div></div>';
+  }
   cont.insertBefore(rc,cont.firstChild);
   // Guardar neto indexado en state para usarlo en intereses
   state.netoIndexado=gX;
@@ -2134,17 +2123,15 @@ function _marcarCambio(){
 async function _guardarHistorial(totales){
   const ahora=new Date();
   const snapStr=JSON.stringify({clienteNIP:state.clienteNIP,clienteNombre:state.clienteNombre,clienteEntidad:state.clienteEntidad||'',clienteCargo:state.clienteCargo||'',clientePrescripcion:state.clientePrescripcion||'',clienteEjecutoria:state.clienteEjecutoria||'',clienteTurno:state.clienteTurno||'',clienteIngresoAnterior:state.clienteIngresoAnterior||'',años:state.años,lxm:state.lxm,mesesPagoAnual:state.mesesPagoAnual||{},selectorPrestAnual:state.selectorPrestAnual||{},mesEjec:state.mesEjec,añoEjec:state.añoEjec,diasVac:state.diasVac,gastosRep:state.gastosRep,gastosPct:state.gastosPct,resolucion:state.resolucion||false,proporcional:state.proporcional||false,honPct:state.honPct||30,honIVA:state.honIVA||'asume'});
-  const elaboradoPor=_usuarioActual?.email||'(sin sesión)';
   const entrada={
     id:Date.now(),
     fecha:ahora.toLocaleDateString('es-CO')+' '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
     nip:state.clienteNIP||'(sin NIP)',nombre:state.clienteNombre||'(sin nombre)',
     años:[...state.años].sort((a,b)=>a-b).join(', '),mesEjec:state.mesEjec+' '+state.añoEjec,
-    totalBruto:totales.gB,totalNeto:totales.gN,totalIndexado:totales.gX,
-    elaboradoPor,snap:snapStr
+    totalBruto:totales.gB,totalNeto:totales.gN,totalIndexado:totales.gX,snap:snapStr
   };
   // API
-  const apiRes=await apiCall('POST','/api/historial',{nip:entrada.nip,nombre:entrada.nombre,años:entrada.años,mes_ejec:entrada.mesEjec,total_bruto:totales.gB,total_neto:totales.gN,total_indexado:totales.gX,elaborado_por:elaboradoPor,snap:snapStr});
+  const apiRes=await apiCall('POST','/api/historial',{nip:entrada.nip,nombre:entrada.nombre,años:entrada.años,mes_ejec:entrada.mesEjec,total_bruto:totales.gB,total_neto:totales.gN,total_indexado:totales.gX,snap:snapStr});
   if(apiRes?.id) entrada.id=apiRes.id;
   // localStorage backup
   let hist=[];try{hist=JSON.parse(localStorage.getItem('liq_hist')||'[]');}catch(e){}
@@ -2196,7 +2183,7 @@ function _renderTablaHistorial(cont, hist, origen, histFiltrado, cRama, cFisc){
   wrap.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+histFiltrado.length+' liquidaciones'+(histFiltrado.length!==hist.length?' (filtradas de '+hist.length+')':'')+' | <span style="color:#1e5631;font-weight:600">RAMA: '+cRama+'</span> | <span style="color:#1F3864;font-weight:600">FISCALÍA: '+cFisc+'</span></div>';
   const tbl=document.createElement('table');
   tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
-  tbl.innerHTML='<thead><tr><th>Fecha</th><th>Elaboró</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th class="r">Peso</th><th>Acciones</th></tr></thead>';
+  tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th class="r">Peso</th><th>Acciones</th></tr></thead>';
   const tbody=document.createElement('tbody');
   histFiltrado.forEach((h,i)=>{
     const tr=document.createElement('tr');
@@ -2205,11 +2192,8 @@ function _renderTablaHistorial(cont, hist, origen, histFiltrado, cRama, cFisc){
     const pesoBytes=(h.snap||'').length;
     const pesoLabel=pesoBytes>1024?Math.round(pesoBytes/1024)+'KB':pesoBytes+'B';
     const pesoColor=pesoBytes>100000?'color:#c62828':pesoBytes>50000?'color:#e65100':'color:#2e7d32';
-    const elab=h.elaboradoPor||h.elaborado_por||'';
-    const elaborLabel=elab?elab.split('@')[0]:'—';
     tr.innerHTML=
       '<td style="font-size:11px;white-space:nowrap">'+h.fecha+'</td>'+
-      '<td style="font-size:11px;color:#1e40af" title="'+elab+'">'+elaborLabel+'</td>'+
       '<td><strong>'+(h.nip||'—')+'</strong></td>'+
       '<td>'+(h.nombre||'—')+'</td>'+
       '<td><span class="badge b-az" style="font-size:10px">'+(h.años||'')+'</span></td>'+
@@ -2246,6 +2230,12 @@ function _renderTablaHistorial(cont, hist, origen, histFiltrado, cRama, cFisc){
     btnRespaldo.title='Exportar respaldo de esta liquidación';
     btnRespaldo.style.marginLeft='4px';
     btnRespaldo.onclick=()=>_exportarRespaldoUno(h);
+    const btnInforme=document.createElement('button');
+    btnInforme.className='btn btn-xs';
+    btnInforme.textContent='📄 Inf.';
+    btnInforme.title='Generar informe técnico de esta liquidación';
+    btnInforme.style.cssText='margin-left:4px;background:#4a4a4a;color:#fff;border:1px solid #777';
+    btnInforme.onclick=()=>_informeDesdeSnap(h.snap||null);
     const btnElim=document.createElement('button');
     btnElim.className='btn btn-xs btn-r';
     btnElim.textContent='✕';
@@ -2255,6 +2245,7 @@ function _renderTablaHistorial(cont, hist, origen, histFiltrado, cRama, cFisc){
     td.appendChild(btnCat);
     td.appendChild(btnCargar);
     td.appendChild(btnRespaldo);
+    td.appendChild(btnInforme);
     td.appendChild(btnElim);
     tbody.appendChild(tr);
   });
@@ -2352,6 +2343,16 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
     const honIVAEl=document.getElementById(state.honIVA==='noasume'?'hon-noasume':'hon-asume');if(honIVAEl)honIVAEl.checked=true;
     const rEl=document.getElementById('g-resolucion');if(rEl){rEl.checked=state.resolucion||false;onResolucionChange();}
     const prEl=document.getElementById('g-proporcional');if(prEl){prEl.checked=state.proporcional||false;}
+    // Restaurar selectores de ejecutoria en UI
+    const mesEjecEl=document.getElementById('r-mesEjec');
+    if(mesEjecEl) mesEjecEl.value=state.mesEjec;
+    const añoEjecEl=document.getElementById('r-añoEjec');
+    if(añoEjecEl){ añoEjecEl.value=state.añoEjec; } else {
+      // Si el select aún no tiene la opción (año viejo), esperar un tick
+      setTimeout(()=>{const e=document.getElementById('r-añoEjec');if(e)e.value=state.añoEjec;},100);
+    }
+    // Disparar cambio para que se actualice el IPC
+    try{onEjecChange();}catch(e){}
     // Marcar años
     document.querySelectorAll('[id^="año-btn-"]').forEach(b=>{b.classList.remove('btn-p');b.classList.add('btn-o');});
     state.años.forEach(a=>{const b=document.getElementById('año-btn-'+a);if(b){b.classList.remove('btn-o');b.classList.add('btn-p');}});
@@ -2367,6 +2368,35 @@ async function _cargarHist(id, fromAPI=false, snapDirecto=null){
       alert('✅ '+nombre+' cargado. Revise el Liquidador por Mes y presione Calcular.');
     }
   }catch(e){alert('Error: '+e.message);}
+}
+async function _informeDesdeSnap(snap){
+  // Restaura el snap en el state silenciosamente y genera el informe técnico
+  if(!snap){alert('Esta liquidación no tiene datos suficientes para el informe.');return;}
+  try{
+    const s=JSON.parse(snap);
+    Object.assign(state,{
+      clienteNIP:s.clienteNIP||'', clienteNombre:s.clienteNombre||'',
+      clienteEntidad:s.clienteEntidad||'', clienteCargo:s.clienteCargo||'',
+      clientePrescripcion:s.clientePrescripcion||'', clienteEjecutoria:s.clienteEjecutoria||'',
+      clienteTurno:s.clienteTurno||'', clienteIngresoAnterior:s.clienteIngresoAnterior||'',
+      mesesPagoAnual:s.mesesPagoAnual||{}, selectorPrestAnual:s.selectorPrestAnual||{},
+      años:s.años||[], lxm:s.lxm||{},
+      mesEjec:s.mesEjec||'Mayo', añoEjec:s.añoEjec||2025,
+      diasVac:s.diasVac||22, gastosRep:s.gastosRep||false, gastosPct:s.gastosPct||33.33,
+      resolucion:s.resolucion||false, proporcional:s.proporcional||false,
+      honPct:s.honPct||30, honIVA:s.honIVA||'asume'
+    });
+    // Restaurar selectores de ejecutoria
+    const mesEjecEl=document.getElementById('r-mesEjec');
+    if(mesEjecEl) mesEjecEl.value=state.mesEjec;
+    const añoEjecEl=document.getElementById('r-añoEjec');
+    if(añoEjecEl) añoEjecEl.value=state.añoEjec;
+    try{onEjecChange();}catch(e){}
+    // Recalcular para tener los totales frescos
+    calcularTodo();
+    // Pequeño delay para que los cálculos terminen antes de exportar
+    setTimeout(()=>exportarInforme(), 400);
+  }catch(e){alert('Error generando informe: '+e.message);}
 }
 async function _eliminarHist(id, fromAPI=false){
   if(!confirm('¿Eliminar esta liquidación?'))return;
@@ -2940,8 +2970,6 @@ function _generarExcel(){
   const mc=MESES_C[MESES.indexOf(state.mesEjec)];
   const ipcEj=APPD.ipc[state.añoEjec]?.[mc]||0;
 
-  // Cesantías e intereses se excluyen del BRUTO/NETO de prestaciones
-  // — se calculan por separado con IPC feb año siguiente en state._cesPorAño
   const COLS=[
     {key:'prodS1',     label:'Bonif. Prod S1',   ibc:true},
     {key:'prodS2',     label:'Bonif. Prod S2',   ibc:true},
@@ -2950,6 +2978,8 @@ function _generarExcel(){
     {key:'primaVac',   label:'Prima Vacaciones'},
     {key:'sueldoVac10',label:'Sueldo Vac.(1/10)'},
     {key:'primaNov',   label:'Prima Navidad'},
+    {key:'cesantias',  label:'Cesantías'},
+    {key:'intereses',  label:'Intereses Ces.'},
   ];
 
   // Construir filas de datos
@@ -3088,11 +3118,6 @@ function _generarExcel(){
     intereses:Math.round(intPrestE.total+intCesE.total),
     netoIdx:Math.round(netoIdxE),
     totalFin:Math.round(totalFinE),
-    // Descuento fondo (modo normal)
-    pctDesc:parseFloat((pctDesc*100).toFixed(1)),
-    descV:Math.round(totalFinE*pctDesc),
-    totalBase:Math.round(totalFinE),
-    valorCompra:Math.round(totalFinE*(1-pctDesc)),
     honPct:Math.round(honPct*100), honV:Math.round(honVE),
     honIVA, honIvaV:Math.round(honIvaVE),
     valorFinal:Math.round(totalFinE-honVE-honIvaVE)
@@ -3199,182 +3224,6 @@ function _generarExcel(){
   } else {
     _cargarYGenerarExcelCliente(payload);
   }
-}
-
-// ══════════════════════════════════════════════════════════
-// EXPORTAR INFORME TÉCNICO DE LIQUIDACIÓN (formato institucional)
-// ══════════════════════════════════════════════════════════
-function exportarInforme(){
-  if(!Object.keys(state.ps).length){
-    alert('Primero calcule y genere el resumen antes de exportar.');
-    return;
-  }
-  if(!API_URL){
-    alert('Esta función requiere conexión con el servidor backend.');
-    return;
-  }
-
-  const mc=MESES_C[MESES.indexOf(state.mesEjec)];
-  const ipcEj=APPD.ipc[state.añoEjec]?.[mc]||0;
-
-  const PREST_KEYS=[
-    {key:'prodS1',     label:'Bonif. Productividad S1', ibc:true},
-    {key:'prodS2',     label:'Bonif. Productividad S2', ibc:true},
-    {key:'servicios',  label:'Bonif. Servicios',        ibc:true},
-    {key:'primaServ',  label:'Prima de Servicios'},
-    {key:'primaVac',   label:'Prima de Vacaciones'},
-    {key:'sueldoVac10',label:'Sueldo Vacacional (1/10)'},
-    {key:'primaNov',   label:'Prima de Navidad'},
-  ];
-
-  // Construir prestsByYear: {año: [{key,label,mes,bon,bruto,neto,ipcIni,ipcFin,idxVal,idxTot}]}
-  const prestsByYear={};
-
-  Object.keys(state.ps).sort((a,b)=>Number(a)-Number(b)).forEach(año=>{
-    const psAño=state.ps[año];
-    if(!psAño||!psAño.resultadosPorCargo) return;
-
-    // BJ representativa del año (promedio o primer cargo)
-    let bonAño=0;
-    const cargos=Object.values(psAño.resultadosPorCargo);
-    if(cargos.length) bonAño=cargos[0].bon||0;
-
-    const filas=[];
-    PREST_KEYS.forEach(col=>{
-      const mesPago=getMesPago(año, col.key==='sueldoVac10'?'sueldoVac':col.key);
-      if(mesPago==='NO') return;
-
-      const val=getValPrest(col.key, parseInt(año));
-      const bruto=Math.round(val.b);
-      if(bruto===0) return;
-
-      const neto=col.ibc ? Math.round(bruto - bruto*0.09) : bruto;
-
-      const mc2=MESES_C[MESES.indexOf(mesPago)];
-      const ipcIni=mc2 ? (APPD.ipc[parseInt(año)]?.[mc2]||0) : 0;
-      const ipcBase=getIPCBase(mesPago, parseInt(año), col.key);
-
-      const mesIdx=MESES.indexOf(mesPago);
-      const ejecIdx=MESES.indexOf(state.mesEjec);
-      const esPosterior=(parseInt(año)>state.añoEjec)||(parseInt(año)===state.añoEjec&&mesIdx>=ejecIdx);
-      const factor=esPosterior?1:((ipcBase&&ipcEj)?ipcEj/ipcBase:1);
-
-      const idxVal=Math.round(neto*(factor-1));
-      const idxTot=Math.round(neto*factor);
-
-      filas.push({
-        key:col.key, label:col.label, mes:mesPago,
-        bon:Math.round(bonAño),
-        bruto, neto,
-        ipcIni: parseFloat(ipcIni.toFixed(2)),
-        ipcFin: parseFloat(ipcEj.toFixed(2)),
-        idxVal, idxTot
-      });
-    });
-
-    if(filas.length) prestsByYear[año]=filas;
-  });
-
-  // BJ utilizada por período (desde detalleCargos o resultadosPorCargo)
-  const bjPorPeriodo=[];
-  const vistosKey=new Set();
-  Object.keys(state.ps).sort((a,b)=>Number(a)-Number(b)).forEach(año=>{
-    const psAño=state.ps[año];
-    if(!psAño||!psAño.resultadosPorCargo) return;
-    Object.values(psAño.resultadosPorCargo).forEach(r=>{
-      const k=r.cargo+'|'+r.entidad+'|'+Math.round(r.bon||0);
-      if(vistosKey.has(k)) return;
-      vistosKey.add(k);
-      bjPorPeriodo.push({
-        desde: String(parseInt(año)),
-        hasta: String(parseInt(año)),
-        cargo: r.cargo||'',
-        bon: Math.round(r.bon||0)
-      });
-    });
-  });
-
-  // Observaciones automáticas
-  const años=Object.keys(state.ps).sort((a,b)=>Number(a)-Number(b));
-  const periodoStr=años.length ? años[0]+' - '+años[años.length-1] : '';
-  const fechaHoy=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
-  const observaciones={texto:[
-    'Liquidación realizada con corte al '+fechaHoy+'.',
-    'Tipo de liquidación: '+(state.resolucion?'Con resolución de condena (aportes empleador 12%/8.5% excluidos del informe)':'Sin resolución — prestaciones sociales sobre bonificación judicial'),
-    'Período liquidado: '+periodoStr+'.',
-    'Indexación calculada con IPC de ejecutoria: '+ipcEj.toFixed(2)+' ('+state.mesEjec+' '+state.añoEjec+').',
-    'No se incluyen intereses moratorios en este informe.',
-    'Cesantías e intereses sobre cesantías se liquidan en documento separado.',
-    'Valores nominales sujetos a prescripción trienal según normativa vigente.',
-    'Los valores presentados están sujetos a verificación y pueden variar.'
-  ]};
-
-  // Resumen global (totales)
-  let totalBruto=0, totalNeto=0, totalIdxTot=0;
-  Object.values(prestsByYear).forEach(filas=>{
-    filas.forEach(f=>{totalBruto+=f.bruto;totalNeto+=f.neto;totalIdxTot+=f.idxTot;});
-  });
-  // Cesantías e intereses por año
-  const cesPorAño = state._cesPorAño || {};
-  let totalCesNeto=0, totalCesIdx=0, totalIntNeto=0, totalIntIdx=0;
-  Object.values(cesPorAño).forEach(d=>{
-    totalCesNeto+=d.cesNeto||0; totalCesIdx+=d.cesIdx||0;
-    totalIntNeto+=d.intNeto||0; totalIntIdx+=d.intIdx||0;
-  });
-
-  const resumen={
-    totalBruto, totalNeto, totalIndexado:totalIdxTot,
-    // cesantías
-    totalCesNeto:Math.round(totalCesNeto),
-    totalCesIdx:Math.round(totalCesIdx),
-    totalIntNeto:Math.round(totalIntNeto),
-    totalIntIdx:Math.round(totalIntIdx),
-    totalCesTot:Math.round(totalCesIdx+totalIntIdx),
-    // gran total sentencia
-    totalSentencia:Math.round(totalIdxTot+(totalCesIdx+totalIntIdx))
-  };
-
-  const payload={
-    cliente:{
-      nombre:state.clienteNombre||'',
-      cc:state.clienteCC||state.clienteNIP||'',
-      entidad:state.clienteEntidad||'',
-      cargo:state.clienteCargo||'',
-      ejecutoria:state.clienteEjecutoria||'',
-      turno:state.clienteTurno||'',
-      periodo:periodoStr,
-      ipc:ipcEj.toFixed(2)+' ('+state.mesEjec+' '+state.añoEjec+')'
-    },
-    prestsByYear, bjPorPeriodo, observaciones, resumen, cesPorAño
-  };
-
-  const btn=document.getElementById('btn-informe-tec');
-  if(btn){btn.textContent='⏳ Generando...';btn.disabled=true;}
-  fetch(API_URL+'/api/exportar-informe',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
-  })
-  .then(res=>{
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    return res.blob();
-  })
-  .then(blob=>{
-    if(btn){btn.textContent='📄 Inf. Técnico';btn.disabled=false;}
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    const nom=(payload.cliente.nombre||'informe').replace(/ /g,'_');
-    const cc=payload.cliente.cc?'_'+payload.cliente.cc:'';
-    a.href=url; a.download='InformeTecnico'+cc+'_'+nom+'.xlsx';
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  })
-  .catch(err=>{
-    console.error('Error generando informe técnico:',err);
-    if(btn){btn.textContent='📄 Inf. Técnico';btn.disabled=false;}
-    alert('Error al generar el informe técnico: '+err.message);
-  });
 }
 
 function _cargarYGenerarExcelCliente(payload){
@@ -3687,7 +3536,6 @@ async function _sincronizarCargosAPI(){
 // AUTENTICACIÓN CON SUPABASE AUTH
 // ══════════════════════════════════════════════════════════
 let _supaClient=null;
-let _usuarioActual=null; // {email, nombre} del usuario autenticado
 
 async function _getSupaClient(){
   if(_supaClient) return _supaClient;
@@ -3723,8 +3571,6 @@ async function checkSession(){
     if(session){
       if(screen) screen.style.display='none';
       if(btnOut) btnOut.style.display='block';
-      _usuarioActual={email:session.user.email, nombre:session.user.user_metadata?.nombre||session.user.email};
-      _mostrarUsuarioActual();
     }
   }catch(e){
     if(screen) screen.style.display='none';
@@ -3744,8 +3590,6 @@ async function doLogin(){
     if(!client) throw new Error('Sin conexión al servidor');
     const {data,error}=await client.auth.signInWithPassword({email,password:pass});
     if(error) throw error;
-    _usuarioActual={email:data.user.email, nombre:data.user.user_metadata?.nombre||data.user.email};
-    _mostrarUsuarioActual();
     const screen=document.getElementById('login-screen');
     const btnOut=document.getElementById('btn-logout');
     if(screen) screen.style.display='none';
@@ -3763,19 +3607,12 @@ async function doLogin(){
 async function doLogout(){
   if(!confirm('¿Cerrar sesión?')) return;
   try{ const c=await _getSupaClient(); if(c) await c.auth.signOut(); }catch(e){}
-  _usuarioActual=null;
-  _mostrarUsuarioActual();
   const screen=document.getElementById('login-screen');
   const btnOut=document.getElementById('btn-logout');
   if(screen) screen.style.display='flex';
   if(btnOut) btnOut.style.display='none';
   const el=document.getElementById('login-email'); if(el) el.value='';
   const pl=document.getElementById('login-pass'); if(pl) pl.value='';
-}
-
-function _mostrarUsuarioActual(){
-  const el=document.getElementById('usuario-actual-label');
-  if(el) el.textContent=_usuarioActual?('👤 '+_usuarioActual.email):'';
 }
 
 
@@ -4513,18 +4350,6 @@ _cargarIPCYTasasAPI();
 checkSession();
 initExtras();
 restaurarSesionLocal();
-
-// Secuencia de teclas para revelar botón de Informe Técnico: Ctrl+Alt+I
-(function(){
-  document.addEventListener('keydown',function(e){
-    if(e.ctrlKey&&e.altKey&&e.key==='i'){
-      const btn=document.getElementById('btn-informe-tec');
-      if(btn){
-        btn.style.display=btn.style.display==='none'?'inline-flex':'none';
-      }
-    }
-  });
-})();
 </script>
 
 <!-- ═══ MODAL CERTIFICADO ═══ -->
@@ -4594,856 +4419,8 @@ restaurarSesionLocal();
   </div>
 </div>
 
-</div><!-- /modulo-bj -->
-
-<!-- ════════════════════════════════════════════════════════
-     MÓDULO: DIFERENCIAS SALARIALES (Abogado Asesor / Abogado de Tribunal)
-════════════════════════════════════════════════════════ -->
-<div id="modulo-ds" style="display:none">
-
-<!-- Tabs DS -->
-<div class="tabs" id="tabs-ds">
-  <div class="tab active" onclick="showDsTab('ds-tab-datos')">📋 Datos del Proceso</div>
-  <div class="tab" onclick="showDsTab('ds-tab-resumen')">📊 Resumen de Prestaciones</div>
-  <div class="tab" onclick="showDsTab('ds-tab-idx')">🔢 Indexación</div>
-  <div class="tab" onclick="showDsTab('ds-tab-mora')">🏦 Intereses de Mora</div>
-  <div class="tab" onclick="showDsTab('ds-tab-export')">📄 Exportar</div>
-</div>
-
-<!-- TAB DS-1: DATOS DEL PROCESO -->
-<div class="tab-content active" id="ds-tab-datos">
-  <div class="card">
-    <div class="ch">📋 Datos del Proceso — Diferencias Salariales (Asesor de Tribunal)</div>
-    <div class="cb">
-      <div class="grid2">
-        <div class="fg"><label>Demandante (Nombre completo)</label><input id="ds-nombre" type="text" placeholder="Nombre completo" oninput="dsOnInput()"></div>
-        <div class="fg"><label>Radicado</label><input id="ds-radicado" type="text" placeholder="Número de radicado (opcional)"></div>
-        <div class="fg"><label>Demandados</label><input id="ds-demandados" type="text" value="Nación – Rama Judicial – Consejo Superior de la Judicatura"></div>
-        <div class="fg"><label>Prescripción</label><input id="ds-prescripcion" type="date" oninput="dsOnInput()"></div>
-        <div class="fg"><label>Turno de pago</label><input id="ds-turno" type="number" placeholder="Número de turno" oninput="dsOnInput()"></div>
-        <div class="fg">
-          <label>Vinculado con anterioridad a la Rama</label>
-          <select id="ds-vinculado" onchange="dsOnInput()">
-            <option value="no">No</option>
-            <option value="si">Sí</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label>Ejecutoria — Mes y año</label>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <select id="ds-ejec-mes" onchange="dsAutoIpcFromSel();dsOnInput()" style="flex:1;min-width:100px">
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-            </select>
-            <select id="ds-ejec-año" onchange="dsAutoIpcFromSel();dsOnInput()" style="width:80px">
-              <!-- Generado por JS -->
-            </select>
-            <span id="ds-ipc-mes-label" style="font-size:11px;color:var(--vd);font-weight:600;white-space:nowrap"></span>
-          </div>
-        </div>
-        <div class="fg">
-          <label>IPC ejecutoria <small style="font-weight:400">(auto)</small></label>
-          <input id="ds-ipc-final" type="number" step="0.01" placeholder="Auto desde IPC DANE" oninput="dsOnInput()" readonly style="background:var(--bg2)">
-        </div>
-        <div class="fg">
-          <label>Días de vacaciones tomados</label>
-          <input id="ds-dias-vac" type="number" value="22" min="1" max="30" oninput="dsOnInput()">
-        </div>
-      </div>
-      <hr>
-      <!-- Años laborados: mes a mes, con meses de pago por año -->
-      <div>
-        <p style="font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">📅 Años laborados — marque el año, ingrese días por mes y configure los meses de pago</p>
-        <div id="ds-years-grid">
-          <!-- Generado por JS -->
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TAB DS-2: RESUMEN DE PRESTACIONES -->
-<div class="tab-content" id="ds-tab-resumen">
-  <div class="card">
-    <div class="ch" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span>📊 Resumen de Prestaciones por Vigencia</span>
-      <button class="btn btn-p btn-sm" onclick="dsUpdateResumen()">🔄 Recalcular</button>
-    </div>
-    <div class="cb">
-      <div id="ds-resumen-container">
-        <p style="color:var(--tx2);font-size:13px">Seleccione años laborados en la pestaña "Datos del Proceso" e ingrese el IPC de ejecutoria.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TAB DS-3: INDEXACIÓN -->
-<div class="tab-content" id="ds-tab-idx">
-  <div class="card">
-    <div class="ch" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span>🔢 Tabla de Indexación por Concepto</span>
-      <button class="btn btn-p btn-sm" onclick="dsUpdateDetalle()">🔄 Recalcular</button>
-    </div>
-    <div class="cb">
-      <div class="tw" id="ds-idx-container">
-        <p style="color:var(--tx2);font-size:13px">Seleccione años laborados en la pestaña "Datos del Proceso" e ingrese el IPC de ejecutoria.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TAB DS-4: INTERESES DE MORA -->
-<div class="tab-content" id="ds-tab-mora">
-  <div class="card">
-    <div class="ch">🏦 Intereses de Mora</div>
-    <div class="cb">
-      <div class="info-box">Los intereses de mora posteriores a la ejecutoria (arts. 192 y 195 CPACA) se calculan en la calculadora compartida del módulo BJ.</div>
-      <div class="bgrp">
-        <button class="btn btn-p" onclick="setModulo('bj');showTab('tab-int')">⚖️ Ir a la Calculadora de Intereses Moratorios (módulo BJ)</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TAB DS-5: EXPORTAR -->
-<div class="tab-content" id="ds-tab-export">
-  <div class="card">
-    <div class="ch">📄 Exportar</div>
-    <div class="cb">
-      <div class="bgrp">
-        <button class="btn btn-s" onclick="dsExportExcel()">📥 Exportar Excel completo</button>
-        <button class="btn btn-o" onclick="showDsTab('ds-tab-resumen');dsUpdateResumen()">👁️ Vista previa Resumen</button>
-        <button class="btn btn-o" onclick="window.print()">🖨️ Imprimir / PDF</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-</div><!-- /modulo-ds -->
-
-<script>
-// ══════════════════════════════════════════════════════════════
-// MÓDULO DIFERENCIAS SALARIALES (DS) — Asesor de Tribunal
-// Decreto tables: [debíaSalario, ganóSalario, debíaBonifJud, ganóBonifJud]
-// ══════════════════════════════════════════════════════════════
-
-// ── 1. Tabla de decretos (Asesor de Tribunal) ─────────────────
-const DS_DECRETOS_ASESOR = {
-  2011:[5140170,3845934,0,0],
-  2012:[5397179,4038231,0,0],
-  2013:[5582842,4177147,443684,478868],
-  2014:[5746978,4299956,870428,939453],
-  2015:[6014787,4500334,1318282,1422822],
-  2016:[6482136,4850010,1804534,1947634],
-  2017:[6919680,5177386,2229728,2406545],
-  2018:[7271892,5440914,2630214,2838791],
-  2019:[7599127,5685755,2713855,2929065],
-  2020:[7988202,5976865,2852804,3079033],
-  2021:[8196694,6132861,2898736,3128607],
-  2022:[8791773,6578106,3061645,3304435],
-  2023:[10077130,7539825,3497011,3774326],
-  2024:[11173521,8360157,3863498,4169876],
-};
-
-// ── 2. Estado DS ──────────────────────────────────────────────
-// dsYearsData[year] = { dias: number } (set when checkbox checked)
-let dsYearsData = {};
-
-// ── 3. Helpers ────────────────────────────────────────────────
-const DS_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const DS_MESES_ABREV = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-function dsFmt(v){
-  if(v===null||v===undefined||isNaN(v)||!isFinite(v)) return '—';
-  return '$'+Math.round(v).toLocaleString('es-CO');
-}
-function dsFmtN(v,d=2){
-  if(v===null||v===undefined||isNaN(v)) return '—';
-  return v.toFixed(d);
-}
-function dsIpc(año,mes){
-  const k = String(año);
-  const mn = DS_MESES_ABREV[mes-1];
-  const row = (typeof ipcData!=='undefined') ? ipcData[k] : null;
-  if(!row) return null;
-  return row[mn]||null;
-}
-function dsIpcFinal(){
-  const v = parseFloat(document.getElementById('ds-ipc-final')?.value);
-  return isNaN(v)?null:v;
-}
-function dsDiasVac(){
-  const v = parseInt(document.getElementById('ds-dias-vac')?.value);
-  return isNaN(v)||v<1?22:v;
-}
-function dsAutoIpcFromSel(){
-  const mes = parseInt(document.getElementById('ds-ejec-mes')?.value)||0;
-  const año = parseInt(document.getElementById('ds-ejec-año')?.value)||0;
-  if(!mes||!año) return;
-  const mesAbrev = DS_MESES_ABREV[mes-1];
-  const row = (typeof ipcData!=='undefined') ? ipcData[String(año)] : null;
-  const ipc = row ? row[mesAbrev] : null;
-  const input = document.getElementById('ds-ipc-final');
-  const label = document.getElementById('ds-ipc-mes-label');
-  if(ipc && input){
-    input.value = ipc;
-    if(label) label.textContent = `✅ ${mesAbrev}-${año}: ${ipc}`;
-  } else {
-    if(label) label.textContent = `⚠️ Sin dato ${mesAbrev}-${año}`;
-  }
-}
-// dsAutoIpc kept for backward compat if called anywhere
-function dsAutoIpc(val){ dsAutoIpcFromSel(); }
-
-function dsGetMesPagoYear(a){
-  // Per-year payment month configuration
-  const g = (suf,def) => {
-    const el = document.getElementById(`ds-mp-${suf}-${a}`);
-    return el ? (parseInt(el.value)||def) : def;
-  };
-  return {
-    prod1: g('prod1',6), prod2: g('prod2',12),
-    serv:  g('serv',12), pserv: g('pserv',7),
-    pvac:  g('pvac',12), svac:  g('svac',12),
-    vbj:   g('vbj',12),  pnav:  g('pnav',12)
-  };
-}
-// Legacy alias — uses year-specific selectors for the first checked year
-function dsGetMesPago(){
-  const years = dsGetCheckedYears();
-  return years.length ? dsGetMesPagoYear(years[0]) : {prod1:6,prod2:12,serv:12,pserv:7,pvac:12,svac:12,vbj:12,pnav:12};
-}
-
-function dsGetCheckedYears(){
-  return Object.keys(DS_DECRETOS_ASESOR).map(Number).filter(a=>{
-    const cb = document.getElementById(`ds-year-${a}`);
-    return cb && cb.checked;
-  }).sort((a,b)=>a-b);
-}
-function dsGetYearDias(a){
-  // Sum of all month inputs for this year
-  let total = 0;
-  for(let m=1;m<=12;m++){
-    const el = document.getElementById(`ds-dm-${a}-${m}`);
-    if(el) total += (parseInt(el.value)||0);
-  }
-  // If per-month inputs don't exist yet, fallback to old single input
-  const fallback = document.getElementById(`ds-dias-${a}`);
-  if(total===0 && fallback) total = (parseInt(fallback.value)||0);
-  return total;
-}
-function dsGetYearDiasS1(a){
-  // Days Jan-Jun
-  let total = 0;
-  for(let m=1;m<=6;m++){
-    const el = document.getElementById(`ds-dm-${a}-${m}`);
-    if(el) total += (parseInt(el.value)||0);
-  }
-  return total;
-}
-function dsGetYearDiasS2(a){
-  // Days Jul-Dec
-  let total = 0;
-  for(let m=7;m<=12;m++){
-    const el = document.getElementById(`ds-dm-${a}-${m}`);
-    if(el) total += (parseInt(el.value)||0);
-  }
-  return total;
-}
-
-// ── 4. Inicialización ────────────────────────────────────────
-function dsInit(){
-  // Populate ejecutoria year selector
-  const añoSel = document.getElementById('ds-ejec-año');
-  if(añoSel && !añoSel.children.length){
-    for(let y=2026;y>=2011;y--){
-      const o = document.createElement('option');
-      o.value=y; o.textContent=y;
-      if(y===2025) o.selected=true;
-      añoSel.appendChild(o);
-    }
-  }
-  // Generate year cards
-  const grid = document.getElementById('ds-years-grid');
-  if(!grid || grid.children.length > 0) return;
-  const MESES_NOM = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const años = Object.keys(DS_DECRETOS_ASESOR).map(Number).sort((a,b)=>a-b);
-  const msOpts = (def)=>DS_MESES.map((nm,i)=>`<option value="${i+1}"${i+1===def?' selected':''}>${nm}</option>`).join('');
-
-  grid.innerHTML = años.map(a=>`
-<div id="ds-ycard-${a}" style="border:1.5px solid var(--bd);border-radius:10px;margin-bottom:10px;overflow:hidden">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);cursor:pointer" onclick="dsToggleYear(${a})">
-    <input type="checkbox" id="ds-year-${a}" value="${a}"
-      style="width:16px;height:16px;accent-color:var(--az2)"
-      onchange="dsOnYearCheck(${a});event.stopPropagation()">
-    <span style="font-weight:700;font-size:14px">Vigencia ${a}</span>
-    <span id="ds-ysummary-${a}" style="font-size:11px;color:var(--tx2);margin-left:4px"></span>
-    <span style="margin-left:auto;font-size:11px;color:var(--tx2)" id="ds-ytoggle-${a}">▶ Expandir</span>
-  </div>
-  <div id="ds-ybody-${a}" style="display:none;padding:14px">
-    <!-- Días por mes -->
-    <p style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;margin-bottom:8px">Días trabajados por mes</p>
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px">
-      ${MESES_NOM.map((nm,i)=>`
-      <div style="text-align:center">
-        <div style="font-size:10px;color:var(--tx2);margin-bottom:3px">${nm}</div>
-        <input type="number" id="ds-dm-${a}-${i+1}" min="0" max="31" value="0"
-          style="width:100%;padding:4px;border:1px solid var(--bd);border-radius:5px;font-size:12px;text-align:center"
-          oninput="dsOnDiasChange(${a})">
-      </div>`).join('')}
-    </div>
-    <div style="font-size:11px;color:var(--tx2);margin-bottom:14px">
-      Total días: <strong id="ds-ytotal-${a}">0</strong> &nbsp;|&nbsp; S1 (Ene–Jun): <strong id="ds-ys1-${a}">0</strong> &nbsp;|&nbsp; S2 (Jul–Dic): <strong id="ds-ys2-${a}">0</strong>
-    </div>
-    <!-- Meses de pago por prestación (este año) -->
-    <p style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;margin-bottom:8px">Meses de pago — vigencia ${a}</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
-      <div class="fg" style="margin:0"><label style="font-size:11px">Bonif.Prod S1</label>
-        <select id="ds-mp-prod1-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(6)}</select></div>
-      <div class="fg" style="margin:0"><label style="font-size:11px">Bonif.Prod S2</label>
-        <select id="ds-mp-prod2-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
-      <div class="fg" style="margin:0"><label style="font-size:11px">Bonif.Servicios</label>
-        <select id="ds-mp-serv-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
-      <div class="fg" style="margin:0"><label style="font-size:11px">Prima Servicios</label>
-        <select id="ds-mp-pserv-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(7)}</select></div>
-      <div class="fg" style="margin:0"><label style="font-size:11px">Prima Vacaciones</label>
-        <select id="ds-mp-pvac-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
-      <div class="fg" style="margin:0"><label style="font-size:11px">Sueldo Vacaciones</label>
-        <select id="ds-mp-svac-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
-      <div class="fg" style="margin:0"><label style="font-size:11px">Vac.Bonif.Judicial</label>
-        <select id="ds-mp-vbj-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
-      <div class="fg" style="margin:0"><label style="font-size:11px">Prima Navidad</label>
-        <select id="ds-mp-pnav-${a}" onchange="dsOnInput()" style="font-size:12px">${msOpts(12)}</select></div>
-    </div>
-  </div>
-</div>`).join('');
-}
-
-function dsToggleYear(a){
-  const body = document.getElementById(`ds-ybody-${a}`);
-  const tog  = document.getElementById(`ds-ytoggle-${a}`);
-  const cb   = document.getElementById(`ds-year-${a}`);
-  if(!body) return;
-  const open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  if(tog) tog.textContent = open ? '▶ Expandir' : '▲ Colapsar';
-}
-function dsOnYearCheck(a){
-  const cb   = document.getElementById(`ds-year-${a}`);
-  const body = document.getElementById(`ds-ybody-${a}`);
-  const tog  = document.getElementById(`ds-ytoggle-${a}`);
-  if(body && cb.checked){
-    body.style.display = 'block';
-    if(tog) tog.textContent = '▲ Colapsar';
-  }
-  dsOnInput();
-}
-function dsOnDiasChange(a){
-  const s1 = dsGetYearDiasS1(a);
-  const s2 = dsGetYearDiasS2(a);
-  const tot = s1+s2;
-  const ts1 = document.getElementById(`ds-ys1-${a}`);
-  const ts2 = document.getElementById(`ds-ys2-${a}`);
-  const tt  = document.getElementById(`ds-ytotal-${a}`);
-  const sm  = document.getElementById(`ds-ysummary-${a}`);
-  if(ts1) ts1.textContent = s1;
-  if(ts2) ts2.textContent = s2;
-  if(tt)  tt.textContent  = tot;
-  if(sm)  sm.textContent  = tot ? `(${tot} días)` : '';
-  dsOnInput();
-}
-function dsOnInput(){
-  const ipcFinal = dsIpcFinal();
-  if(!ipcFinal) return;
-  const years = dsGetCheckedYears();
-  if(!years.length) return;
-  dsUpdateResumen();
-  dsUpdateDetalle();
-}
-
-// ── 5. Cálculo anual ─────────────────────────────────────────
-// Returns object with all values for year `a` given `totalDias`
-function dsCalcYear(a){
-  const dec = DS_DECRETOS_ASESOR[a];
-  if(!dec) return null;
-  const totalDias = dsGetYearDias(a);
-  if(!totalDias) return null;
-  const diasVac = dsDiasVac();
-  const [dS, gS, dB, gB] = dec;
-  const difS = dS - gS;
-  const difB = dB - gB;
-
-  // Semestres — from per-month inputs
-  const diasS1 = dsGetYearDiasS1(a);
-  const diasS2 = dsGetYearDiasS2(a);
-
-  // Diferencias salariales diarias (proporcional a días)
-  const difSTotal = difS * totalDias / 30; // monthly dif × months
-  const difBTotal = difB * totalDias / 30;
-
-  // Bonif. Productividad: debía/ganó × 0.5 × (dias_sem / 180)
-  const prod1Deb = (diasS1 > 0) ? dS * 0.5 * (diasS1 / 180) : 0;
-  const prod1Gan = (diasS1 > 0) ? gS * 0.5 * (diasS1 / 180) : 0;
-  const prod1Dif = prod1Deb - prod1Gan;
-  const prod2Deb = (diasS2 > 0) ? dS * 0.5 * (diasS2 / 180) : 0;
-  const prod2Gan = (diasS2 > 0) ? gS * 0.5 * (diasS2 / 180) : 0;
-  const prod2Dif = prod2Deb - prod2Gan;
-  const prodTotDif = prod1Dif + prod2Dif;
-
-  // Bonif. Servicios: debía × 0.35 (annual, no proportionality on partial year)
-  const servDeb = dS * 0.35;
-  const servGan = gS * 0.35;
-  const servDif = servDeb - servGan;
-
-  // Prima Servicios: debía/30 × 15
-  const pservDeb = dS * 0.5;
-  const pservGan = gS * 0.5;
-  const pservDif = pservDeb - pservGan;
-
-  // Prima Vacaciones: BASE = sal + 1/12 BonifServ + 1/12 PrimaServ + 1/12 BonifProd(S1+S2)
-  const pvacBaseDeb = dS + servDeb/12 + pservDeb/12 + (prod1Deb+prod2Deb)/12;
-  const pvacBaseGan = gS + servGan/12 + pservGan/12 + (prod1Gan+prod2Gan)/12;
-  const pvacDeb = pvacBaseDeb / 30 * 15;
-  const pvacGan = pvacBaseGan / 30 * 15;
-  const pvacDif = pvacDeb - pvacGan;
-
-  // Sueldo Vacaciones: BASE/30 × diasVac
-  const svacDeb = pvacBaseDeb / 30 * diasVac;
-  const svacGan = pvacBaseGan / 30 * diasVac;
-  const svacDif = svacDeb - svacGan;
-
-  // Vac. Bonif. Judicial: bonifJud/30 × diasVac
-  const vbjDeb = dB / 30 * diasVac;
-  const vbjGan = gB / 30 * diasVac;
-  const vbjDif = vbjDeb - vbjGan;
-
-  // Prima Navidad: BASE = sal + 1/12 BonifServ + 1/12 PrimaServ + 1/12 BonifProd + 1/12 PrimaVac
-  const pnavBaseDeb = dS + servDeb/12 + pservDeb/12 + (prod1Deb+prod2Deb)/12 + pvacDeb/12;
-  const pnavBaseGan = gS + servGan/12 + pservGan/12 + (prod1Gan+prod2Gan)/12 + pvacGan/12;
-  const pnavDif = pnavBaseDeb - pnavBaseGan;
-
-  // Cesantías: BASE = sal + 1/12 BonifProd + 1/12 BonifServ + 1/12 PrimaServ + 1/12 PrimaVac + 1/12 PrimaNAV
-  const cesBDeb = dS + (prod1Deb+prod2Deb)/12 + servDeb/12 + pservDeb/12 + pvacDeb/12 + pnavBaseDeb/12;
-  const cesBGan = gS + (prod1Gan+prod2Gan)/12 + servGan/12 + pservGan/12 + pvacGan/12 + pnavBaseGan/12;
-  const cesDeb = cesBDeb / 360 * totalDias;
-  const cesGan = cesBGan / 360 * totalDias;
-  const cesDif = cesDeb - cesGan;
-
-  // Intereses Cesantías: 12%
-  const intCesDif = cesDif * 0.12;
-
-  return {
-    a, totalDias, diasS1, diasS2, diasVac,
-    debia: { sal:dS, bonif:dB, prod1:prod1Deb, prod2:prod2Deb, serv:servDeb, pserv:pservDeb,
-             pvac:pvacDeb, svac:svacDeb, vbj:vbjDeb, pnav:pnavBaseDeb, ces:cesDeb },
-    gano:  { sal:gS, bonif:gB, prod1:prod1Gan, prod2:prod2Gan, serv:servGan, pserv:pservGan,
-             pvac:pvacGan, svac:svacGan, vbj:vbjGan, pnav:pnavBaseGan, ces:cesGan },
-    dif:   { sal:difS, bonif:difB, salTotal:difSTotal, bonifTotal:difBTotal,
-             prod1:prod1Dif, prod2:prod2Dif, prodTot:prodTotDif,
-             serv:servDif, pserv:pservDif, pvac:pvacDif, svac:svacDif,
-             vbj:vbjDif, pnav:pnavDif, ces:cesDif, intCes:intCesDif }
-  };
-}
-
-// ── 6. Tab 2 — Resumen de Prestaciones ───────────────────────
-function dsUpdateResumen(){
-  const ipcFinal = dsIpcFinal();
-  const cont = document.getElementById('ds-resumen-container');
-  if(!cont) return;
-  const years = dsGetCheckedYears();
-  if(!years.length||!ipcFinal){
-    cont.innerHTML='<p style="color:var(--tx2);font-size:13px">Seleccione años laborados e ingrese el IPC de ejecutoria.</p>';
-    return;
-  }
-  let totalIdx=0, totalCesIdx=0, totalIntIdx=0;
-  let vigCards='';
-
-  for(const a of years){
-    const c = dsCalcYear(a);
-    if(!c) continue;
-    const d = c.dif;
-    const mp = dsGetMesPagoYear(a); // per-year payment months
-
-    // Indexación de cada concepto
-    const idxCalc=(mes,año,val,exempt=false)=>{
-      const ipcI = dsIpc(año||a, mes);
-      const fac = (ipcI&&ipcFinal) ? ipcFinal/ipcI : null;
-      const ded = exempt ? 0 : val*0.09;
-      const neto = val - ded;
-      const idxV = fac ? neto*fac : 0;
-      return {val, ded, neto, ipcI, fac, idx:idxV};
-    };
-
-    // Conceptos con su mes y año de pago
-    const cDifSal   = idxCalc(1,  a,  d.salTotal);
-    const cDifBonif = idxCalc(1,  a,  d.bonifTotal);
-    const cProd1    = idxCalc(mp.prod1, a, d.prod1);
-    const cProd2    = idxCalc(mp.prod2, a, d.prod2);
-    const cServ     = idxCalc(mp.serv,  a, d.serv);
-    const cPserv    = idxCalc(mp.pserv, a, d.pserv, true); // Prima Servicios: exenta
-    const cPvac     = idxCalc(mp.pvac,  a, d.pvac);
-    const cSvac     = idxCalc(mp.svac,  a, d.svac,  true); // Sueldo Vac: exento
-    const cVbj      = idxCalc(mp.vbj,   a, d.vbj);
-    const cPnav     = idxCalc(mp.pnav,  a, d.pnav);
-
-    // Cesantías: IPC desde Feb año+1; Intereses: IPC desde Ene año+1
-    const ipcCesI = dsIpc(a+1, 2);
-    const facCes  = (ipcCesI&&ipcFinal) ? ipcFinal/ipcCesI : null;
-    const cesNeto = d.ces * 0.91; // 9% ded
-    const cesIdx  = facCes ? cesNeto*facCes : 0;
-
-    const ipcIntI = dsIpc(a+1, 1);
-    const facInt  = (ipcIntI&&ipcFinal) ? ipcFinal/ipcIntI : null;
-    const intNeto = d.intCes * 0.91;
-    const intIdx  = facInt ? intNeto*facInt : 0;
-
-    const subtotalIdx = [cDifSal,cDifBonif,cProd1,cProd2,cServ,cPserv,cPvac,cSvac,cVbj,cPnav]
-                        .reduce((s,x)=>s+x.idx,0);
-    const vigTotal = subtotalIdx + cesIdx + intIdx;
-    totalIdx    += subtotalIdx;
-    totalCesIdx += cesIdx;
-    totalIntIdx += intIdx;
-
-    const row=(label,deb,gan,dif,note='')=>`
-      <tr style="border-bottom:1px solid #e8edf3">
-        <td style="padding:5px 12px;font-size:12px">${label}${note?`<br><span style="font-size:10px;color:var(--tx2)">${note}</span>`:''}</td>
-        <td class="r mono" style="padding:5px 12px;font-size:12px">${dsFmt(deb)}</td>
-        <td class="r mono" style="padding:5px 12px;font-size:12px">${dsFmt(gan)}</td>
-        <td class="r mono" style="padding:5px 12px;font-size:12px;font-weight:700;color:var(--az2)">${dsFmt(dif)}</td>
-      </tr>`;
-    const sepRow=(label)=>`
-      <tr style="background:#e8edf3">
-        <td colspan="4" style="padding:4px 12px;font-size:11px;font-weight:700;color:var(--az);text-transform:uppercase;letter-spacing:.3px">${label}</td>
-      </tr>`;
-
-    vigCards += `
-    <div class="card" style="margin-bottom:14px">
-      <div style="background:#1a3a5c;color:#fff;padding:9px 16px;font-weight:700;font-size:13px;display:flex;align-items:center;gap:10px">
-        Vigencia ${a}
-        <span style="font-weight:400;font-size:11px;opacity:.8">${c.totalDias} días</span>
-        <span style="margin-left:auto;font-family:monospace;font-size:12px">TOTAL INDEXADO: ${dsFmt(vigTotal)}</span>
-      </div>
-      <div class="tw">
-        <table style="width:100%;border-collapse:collapse">
-          <thead><tr style="background:#e8edf3">
-            <th style="padding:7px 12px;text-align:left;font-size:11px;width:40%">Concepto</th>
-            <th style="padding:7px 12px;text-align:right;font-size:11px">Debía percibir</th>
-            <th style="padding:7px 12px;text-align:right;font-size:11px">Percibió</th>
-            <th style="padding:7px 12px;text-align:right;font-size:11px">Diferencia</th>
-          </tr></thead>
-          <tbody>
-            ${row('Salario mensual (decreto)',dS,gS,d.sal)}
-            ${row('Bonif. Judicial mensual',dB,gB,d.bonif)}
-            ${row('Días trabajados año '+a,'','',c.totalDias)}
-            ${sepRow('Prestaciones Sociales')}
-            ${row('Bonif. Productividad S1',c.debia.prod1,c.gano.prod1,d.prod1,`${c.diasS1} días S1`)}
-            ${row('Bonif. Productividad S2',c.debia.prod2,c.gano.prod2,d.prod2,`${c.diasS2} días S2`)}
-            ${row('Bonif. por Servicios',c.debia.serv,c.gano.serv,d.serv)}
-            ${row('Prima de Servicios ✱exenta',c.debia.pserv,c.gano.pserv,d.pserv)}
-            ${row('Prima de Vacaciones',c.debia.pvac,c.gano.pvac,d.pvac)}
-            ${row('Sueldo de Vacaciones ✱exento',c.debia.svac,c.gano.svac,d.svac,`${c.diasVac} días`)}
-            ${row('Vac. Bonif. Judicial',c.debia.vbj,c.gano.vbj,d.vbj,`${c.diasVac} días`)}
-            ${row('Prima de Navidad',c.debia.pnav,c.gano.pnav,d.pnav)}
-            <tr style="background:#f4f6f9;font-weight:700">
-              <td style="padding:6px 12px;font-size:12px">SUBTOTAL PRESTACIONES</td>
-              <td colspan="2"></td>
-              <td class="r mono" style="padding:6px 12px;font-size:13px">${dsFmt(d.prod1+d.prod2+d.serv+d.pserv+d.pvac+d.svac+d.vbj+d.pnav)}</td>
-            </tr>
-            ${sepRow('Cesantías (pagaderas año siguiente)')}
-            ${row(`Cesantías (Feb ${a+1})`,c.debia.ces,c.gano.ces,d.ces)}
-            ${row(`Intereses Cesantías (Ene ${a+1})`,c.debia.ces*0.12,c.gano.ces*0.12,d.intCes)}
-          </tbody>
-          <tfoot>
-            <tr style="background:#0f2744;color:#fff;font-weight:700">
-              <td colspan="3" style="padding:7px 12px;font-size:12px">TOTAL VIGENCIA ${a} (indexado)</td>
-              <td class="r mono" style="padding:7px 12px;font-size:13px">${dsFmt(vigTotal)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>`;
-  }
-
-  const totalGeneral = totalIdx + totalCesIdx + totalIntIdx;
-  const nombre = document.getElementById('ds-nombre')?.value||'—';
-  const prescStr = document.getElementById('ds-prescripcion')?.value||'—';
-  const ejStr = document.getElementById('ds-ejecutoria')?.value||'—';
-  const turnoStr = document.getElementById('ds-turno')?.value||'—';
-
-  const cards=`
-  <div class="rcards" style="margin-bottom:20px">
-    <div class="rc az"><div class="rl">Capital (prestaciones)</div><div class="rv">${dsFmt(totalIdx)}</div></div>
-    <div class="rc" style="background:#d1fae5;color:#065f46"><div class="rl">Cesantías indexadas</div><div class="rv">${dsFmt(totalCesIdx)}</div></div>
-    <div class="rc" style="background:#e0f2fe;color:#0369a1"><div class="rl">Int. cesantías indexados</div><div class="rv">${dsFmt(totalIntIdx)}</div></div>
-    <div class="rc" style="background:#1a3a5c;color:#fff"><div class="rl">TOTAL INDEXADO</div><div class="rv" style="font-size:20px">${dsFmt(totalGeneral)}</div></div>
-  </div>`;
-
-  cont.innerHTML = `
-    <div class="card" style="margin-bottom:14px">
-      <div class="ch">📋 Datos del Proceso</div>
-      <div class="cb" style="font-size:13px;line-height:1.9">
-        <strong>Demandante:</strong> ${nombre} &nbsp;|&nbsp;
-        <strong>Radicado:</strong> ${document.getElementById('ds-radicado')?.value||'—'}<br>
-        <strong>Demandados:</strong> ${document.getElementById('ds-demandados')?.value||'—'}<br>
-        <strong>Prescripción:</strong> ${prescStr} &nbsp;|&nbsp;
-        <strong>Ejecutoria:</strong> ${ejStr} &nbsp;|&nbsp;
-        <strong>Turno:</strong> ${turnoStr} &nbsp;|&nbsp;
-        <strong>IPC ejecutoria:</strong> ${ipcFinal||'—'}
-      </div>
-    </div>
-    ${cards}
-    ${vigCards}
-    <div class="card">
-      <div class="ch">📋 Resumen General</div>
-      <div class="cb">
-        <table style="width:100%;max-width:620px">
-          <tr><td style="padding:7px 4px">Total indexado – capital (diferencias salariales y prestaciones)</td>
-              <td class="r mono" style="font-weight:700">${dsFmt(totalIdx)}</td></tr>
-          <tr><td style="padding:7px 4px">Total indexado – cesantías e intereses a las cesantías</td>
-              <td class="r mono" style="font-weight:700">${dsFmt(totalCesIdx+totalIntIdx)}</td></tr>
-          <tr style="border-top:2px solid var(--az)">
-            <td style="padding:10px 4px;font-weight:700;font-size:15px">TOTAL INDEXADO DE LA LIQUIDACIÓN</td>
-            <td class="r mono" style="font-weight:700;font-size:18px;color:var(--az2)">${dsFmt(totalGeneral)}</td>
-          </tr>
-        </table>
-        <p style="font-size:11px;color:var(--tx2);margin-top:10px">Los intereses moratorios posteriores a la ejecutoria (arts. 192 y 195 CPACA) no hacen parte de este total. ✱exenta/exento = no sujeto a deducciones del 9%.</p>
-      </div>
-    </div>`;
-}
-
-// ── 7. Tab 3 — Indexación (tabla DETALLES) ────────────────────
-function dsUpdateDetalle(){
-  const ipcFinal = dsIpcFinal();
-  const cont = document.getElementById('ds-idx-container');
-  if(!cont) return;
-  const years = dsGetCheckedYears();
-  if(!years.length||!ipcFinal){
-    cont.innerHTML='<p style="color:var(--tx2);font-size:13px">Seleccione años laborados e ingrese el IPC de ejecutoria.</p>';
-    return;
-  }
-  // Build flat rows: each concept per year
-  const rows=[];
-  let grandTotal=0;
-
-  const addRow=(a,concepto,mesP,añoP,val,exempt=false)=>{
-    if(!val||val===0) return;
-    const ipcI = dsIpc(añoP||a, mesP);
-    const ded  = exempt ? 0 : val*0.09;
-    const neto = val - ded;
-    const fac  = (ipcI&&ipcFinal) ? ipcFinal/ipcI : null;
-    const idx  = fac ? neto*fac : 0;
-    grandTotal += idx;
-    rows.push({a, concepto, mesP, añoP:añoP||a, val, ded, neto, ipcI, ipcFinal, fac, idx});
-  };
-
-  for(const a of years){
-    const c = dsCalcYear(a);
-    if(!c) continue;
-    const d=c.dif;
-    const mp = dsGetMesPagoYear(a); // per-year
-    addRow(a,'Dif. Salario (mensual acum.)', 1, a, d.salTotal);
-    addRow(a,'Dif. Bonif. Judicial (mensual acum.)', 1, a, d.bonifTotal);
-    addRow(a,'Bonif. Productividad S1', mp.prod1, a, d.prod1);
-    addRow(a,'Bonif. Productividad S2', mp.prod2, a, d.prod2);
-    addRow(a,'Bonif. por Servicios',    mp.serv,  a, d.serv);
-    addRow(a,'Prima de Servicios ✱',   mp.pserv, a, d.pserv, true);
-    addRow(a,'Prima de Vacaciones',     mp.pvac,  a, d.pvac);
-    addRow(a,'Sueldo de Vacaciones ✱', mp.svac,  a, d.svac,  true);
-    addRow(a,'Vac. Bonif. Judicial',    mp.vbj,   a, d.vbj);
-    addRow(a,'Prima de Navidad',        mp.pnav,  a, d.pnav);
-    addRow(a,'Cesantías',               2, a+1, d.ces);
-    addRow(a,'Intereses Cesantías',     1, a+1, d.intCes);
-  }
-
-  const ths = ['Vigencia','Concepto','BRUTO','Ded. 9%','NETO',
-               'Mes IPC ini','Año IPC','IPC inicial','IPC ejecutoria','Factor','VALOR INDEXADO'];
-  const thHtml = ths.map(t=>`<th style="padding:7px 8px;font-size:10px;text-align:${['BRUTO','Ded. 9%','NETO','IPC inicial','IPC ejecutoria','Factor','VALOR INDEXADO'].includes(t)?'right':'left'};white-space:nowrap">${t}</th>`).join('');
-
-  const rowsHtml = rows.map(r=>`
-    <tr style="border-bottom:1px solid #e8edf3">
-      <td style="padding:5px 8px;font-weight:700;font-size:12px">${r.a}</td>
-      <td style="padding:5px 8px;font-size:12px">${r.concepto}</td>
-      <td class="r mono" style="padding:5px 8px;font-size:11px">${dsFmt(r.val)}</td>
-      <td class="r mono" style="padding:5px 8px;font-size:11px;color:var(--rj)">${r.ded?dsFmt(r.ded):'—'}</td>
-      <td class="r mono" style="padding:5px 8px;font-size:11px;font-weight:700">${dsFmt(r.neto)}</td>
-      <td style="padding:5px 8px;font-size:11px;text-align:center">${DS_MESES_ABREV[r.mesP-1]}</td>
-      <td style="padding:5px 8px;font-size:11px;text-align:center">${r.añoP}</td>
-      <td class="r mono" style="padding:5px 8px;font-size:11px;color:var(--tx2)">${r.ipcI?dsFmtN(r.ipcI):'—'}</td>
-      <td class="r mono" style="padding:5px 8px;font-size:11px;color:var(--tx2)">${dsFmtN(ipcFinal)}</td>
-      <td class="r mono" style="padding:5px 8px;font-size:11px;color:var(--tx2)">${r.fac?dsFmtN(r.fac,4):'—'}</td>
-      <td class="r mono" style="padding:5px 8px;font-size:12px;font-weight:700;background:#e8f4ff;color:#1e3a5c">${dsFmt(r.idx)}</td>
-    </tr>`).join('');
-
-  cont.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="background:#1a3a5c;color:#fff">${thHtml}</tr></thead>
-      <tbody>${rowsHtml}</tbody>
-      <tfoot>
-        <tr style="background:#0f2744;color:#fff;font-weight:700">
-          <td colspan="10" style="padding:8px 10px;font-size:13px">TOTAL VALOR INDEXADO</td>
-          <td class="r mono" style="padding:8px 10px;font-size:14px">${dsFmt(grandTotal)}</td>
-        </tr>
-      </tfoot>
-    </table>
-    <p style="font-size:11px;color:var(--tx2);margin-top:8px">✱ Prima de Servicios y Sueldo de Vacaciones son exentas de deducciones (9% = $0). Dif. Salario y Bonif. mensual indexadas usando IPC de enero del año como referencia.</p>`;
-}
-
-// ── 8. Tab DS — navegación ────────────────────────────────────
-function showDsTab(id){
-  document.querySelectorAll('#modulo-ds .tab-content').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('#tabs-ds .tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
-  const ids=['ds-tab-datos','ds-tab-resumen','ds-tab-idx','ds-tab-mora','ds-tab-export'];
-  const i=ids.indexOf(id);
-  document.querySelectorAll('#tabs-ds .tab')[i]?.classList.add('active');
-  if(id==='ds-tab-resumen') dsUpdateResumen();
-  if(id==='ds-tab-idx') dsUpdateDetalle();
-}
-
-// ── 9. Exportar Excel ─────────────────────────────────────────
-function dsExportExcel(){
-  if(typeof XLSX==='undefined'){ alert('Librería Excel no disponible. Verifique conexión.'); return; }
-  const ipcFinal = dsIpcFinal();
-  if(!ipcFinal){ alert('Ingrese el IPC de ejecutoria primero.'); return; }
-  const years = dsGetCheckedYears();
-  if(!years.length){ alert('Seleccione al menos un año laborado.'); return; }
-  const mp = dsGetMesPago();
-  const nombre = document.getElementById('ds-nombre')?.value||'(sin nombre)';
-  const radicado = document.getElementById('ds-radicado')?.value||'';
-  const demandados = document.getElementById('ds-demandados')?.value||'';
-
-  const wb = XLSX.utils.book_new();
-  const rows=[];
-  rows.push(['INFORME TÉCNICO DE LIQUIDACIÓN – DIFERENCIAS SALARIALES (ASESOR DE TRIBUNAL)']);
-  rows.push([]);
-  rows.push(['Demandante:', nombre]);
-  rows.push(['Radicado:', radicado]);
-  rows.push(['Demandados:', demandados]);
-  rows.push(['Prescripción:', document.getElementById('ds-prescripcion')?.value||'']);
-  rows.push(['Ejecutoria:', document.getElementById('ds-ejecutoria')?.value||'']);
-  rows.push(['Turno de pago:', document.getElementById('ds-turno')?.value||'']);
-  rows.push(['IPC mes de ejecutoria:', ipcFinal]);
-  rows.push([]);
-
-  // Hoja 1: Prestaciones por vigencia
-  rows.push(['LIQUIDACIÓN POR VIGENCIA']);
-  rows.push([]);
-  rows.push(['Vigencia','Días','Dif.Sal./mes','Dif.Bonif./mes',
-             'BonifProd S1','BonifProd S2','BonifServ','PrimaServ','PrimaVac',
-             'SueldoVac','VacBonifJud','PrimaNAV',
-             'Cesantías','Int.Cesantías','TOTAL BRUTO']);
-
-  let totBruto=0,totCes=0,totInt=0,totIdx=0;
-
-  for(const a of years){
-    const c = dsCalcYear(a);
-    if(!c) continue;
-    const d=c.dif;
-    const bruto = d.salTotal+d.bonifTotal+d.prod1+d.prod2+d.serv+d.pserv+d.pvac+d.svac+d.vbj+d.pnav;
-    totBruto+=bruto; totCes+=d.ces; totInt+=d.intCes;
-    rows.push([a, c.totalDias, d.sal, d.bonif,
-               d.prod1, d.prod2, d.serv, d.pserv, d.pvac,
-               d.svac, d.vbj, d.pnav,
-               d.ces, d.intCes, bruto]);
-  }
-  rows.push(['TOTAL','','','','','','','','','','','',totCes,totInt,totBruto]);
-  rows.push([]);
-
-  // Hoja 2: Indexación
-  rows.push(['TABLA DE INDEXACIÓN']);
-  rows.push([]);
-  rows.push(['Vigencia','Concepto','BRUTO','Ded.9%','NETO','Mes IPC','Año IPC',
-             'IPC inicial','IPC ejecutoria','Factor','VALOR INDEXADO']);
-
-  for(const a of years){
-    const c = dsCalcYear(a);
-    if(!c) continue;
-    const d=c.dif;
-    const addR=(concepto,mesP,añoP,val,exempt=false)=>{
-      if(!val) return;
-      const ipcI=dsIpc(añoP||a,mesP);
-      const ded=exempt?0:val*0.09;
-      const neto=val-ded;
-      const fac=(ipcI&&ipcFinal)?ipcFinal/ipcI:null;
-      const idx=fac?neto*fac:0;
-      totIdx+=idx;
-      rows.push([a,concepto,val,ded,neto,DS_MESES_ABREV[mesP-1],añoP||a,ipcI,ipcFinal,fac?parseFloat(fac.toFixed(4)):null,idx]);
-    };
-    addR('Dif. Salario mensual', 1,a,d.salTotal);
-    addR('Dif. Bonif. Judicial mensual',1,a,d.bonifTotal);
-    addR('Bonif. Productividad S1',mp.prod1,a,d.prod1);
-    addR('Bonif. Productividad S2',mp.prod2,a,d.prod2);
-    addR('Bonif. por Servicios',mp.serv,a,d.serv);
-    addR('Prima de Servicios',mp.pserv,a,d.pserv,true);
-    addR('Prima de Vacaciones',mp.pvac,a,d.pvac);
-    addR('Sueldo de Vacaciones',mp.svac,a,d.svac,true);
-    addR('Vac. Bonif. Judicial',mp.vbj,a,d.vbj);
-    addR('Prima de Navidad',mp.pnav,a,d.pnav);
-    addR('Cesantías',2,a+1,d.ces);
-    addR('Intereses Cesantías',1,a+1,d.intCes);
-  }
-  rows.push(['','TOTAL INDEXADO','','','','','','','','',totIdx]);
-  rows.push([]);
-  rows.push(['OBSERVACIONES']);
-  rows.push(['1. Cargo: Abogado Asesor de Tribunal. Decreto Función Pública aplicado por vigencia.']);
-  rows.push(['2. Bonif. Productividad = Salario × 0.5 × (días_semestre / 180). S1: ene-jun. S2: jul-dic.']);
-  rows.push(['3. Bonif. Servicios = Salario × 0.35 (anual). Prima Servicios = Salario × 0.5.']);
-  rows.push(['4. Prima de Servicios y Sueldo de Vacaciones: EXENTAS de deducciones del 9%.']);
-  rows.push(['5. Cesantías indexadas desde Feb año+1. Intereses cesantías desde Ene año+1.']);
-  rows.push(['6. No incluye intereses moratorios posteriores a la ejecutoria (arts. 192 y 195 CPACA).']);
-
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[20,30,14,14,14,8,8,12,12,10,14].map(w=>({wch:w}));
-  const fmtPeso='"$"#,##0';
-  const range=XLSX.utils.decode_range(ws['!ref']||'A1');
-  for(let R=range.s.r;R<=range.e.r;R++){
-    for(let C=range.s.c;C<=range.e.c;C++){
-      const addr=XLSX.utils.encode_cell({r:R,c:C});
-      const cell=ws[addr];
-      if(!cell||cell.t!=='n') continue;
-      if([2,3,4,7,8,10].includes(C)) cell.z=fmtPeso;
-    }
-  }
-  XLSX.utils.book_append_sheet(wb,ws,'Liquidación DS');
-  const filename=`LiqDS_${nombre.replace(/\s+/g,'_')}_${new Date().getFullYear()}.xlsx`;
-  XLSX.writeFile(wb,filename);
-}
-
-// ── 10. Selector de módulo ────────────────────────────────────
-// (legacy compatibility — dsCalcAll, dsGetAñoRango, dsGetRango kept as stubs)
-function dsGetAñoRango(){ const y=dsGetCheckedYears(); return{ini:y[0]||2015,fin:y[y.length-1]||2015}; }
-function dsGetRango(){ const r=dsGetAñoRango(); return{aIni:r.ini,aFin:r.fin,mIni:1,mFin:12}; }
-function dsCalcAll(){ dsOnInput(); }
-function dsBuildVerif(){ /* stub — replaced by dsUpdateResumen */ }
-function dsCalcCesantias(){ /* handled inside dsUpdateResumen */ }
-function dsCesNomChange(){}
-
-// ── 13. Selector de módulo ────────────────────────────────────
-function setModulo(tipo){
-  const bj = document.getElementById('modulo-bj');
-  const ds = document.getElementById('modulo-ds');
-  const histTab = document.getElementById('tab-historial');
-  const selBj = document.getElementById('sel-bj');
-  const selDs = document.getElementById('sel-ds');
-  if(tipo==='ds'){
-    if(bj) bj.style.display='none';
-    if(histTab) histTab.style.display='none';
-    if(ds){ ds.style.display='block'; dsInit(); }
-    selBj.style.background='transparent'; selBj.style.color='#93c5fd'; selBj.style.border='2px solid #2563a8';
-    selDs.style.background='#2563a8'; selDs.style.color='#fff'; selDs.style.border='none';
-  } else {
-    if(ds) ds.style.display='none';
-    if(bj) bj.style.display='block';
-    if(histTab) histTab.style.display='';
-    selDs.style.background='transparent'; selDs.style.color='#93c5fd'; selDs.style.border='2px solid #2563a8';
-    selBj.style.background='#2563a8'; selBj.style.color='#fff'; selBj.style.border='none';
-  }
-}
-</script>
-
+</body>
+</html
 <!-- ═══ TAB 8: HISTORIAL ═══ -->
 <div class="tab-content" id="tab-historial">
   <div class="card">
@@ -5486,6 +4463,4 @@ function setModulo(tipo){
     </div>
   </div>
 </div>
-
-</body>
-</html>
+>
