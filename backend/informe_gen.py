@@ -190,9 +190,6 @@ def generar_informe(data: dict) -> bytes:
       B) filas[]      – mismo formato que excel_gen (se convierte automáticamente)
     """
     cliente      = data.get('cliente', {})
-    # bjPorPeriodo viene con {desde, hasta, cargo, bon} por cargo/año
-    # tramosData son tramos de intereses — NO usarlos como BJ
-    bj_periodos  = data.get('bjPorPeriodo', [])
     obs_raw      = data.get('observaciones', [])
     # Acepta tanto lista directa como {texto: [...]}
     if isinstance(obs_raw, dict):
@@ -203,11 +200,59 @@ def generar_informe(data: dict) -> bytes:
 
     # Construir prestsByYear desde filas[] si no viene preconstruido
     prests_año = data.get('prestsByYear') or {}
+    filas = data.get('filas', [])
+    col_hdrs = data.get('colHeaders', [])
     if not prests_año:
-        col_hdrs = data.get('colHeaders', [])
-        filas    = data.get('filas', [])
         if filas and col_hdrs:
             prests_año = _filas_a_prests_año(filas, col_hdrs)
+
+    # ── BJ por período ──────────────────────────────────────────────────────
+    # Preferir bjPorPeriodo del frontend si viene con valores reales (bon > 0).
+    # Si no, derivarlo desde las filas: agrupar por año y tomar el bon de la
+    # primera fila con bon > 0 de ese año (todas las filas del mismo año
+    # comparten el mismo bon_actual).
+    bj_periodos = [p for p in data.get('bjPorPeriodo', []) if (p.get('bon') or 0) > 0]
+
+    if not bj_periodos and filas:
+        # Construir desde filas: un registro por año con cargo y bon
+        bon_por_año = {}
+        for f in filas:
+            if f.get('tipo') == 'sep':
+                continue
+            periodo = str(f.get('periodo', '') or '')
+            if len(periodo) < 4 or not periodo[:4].isdigit():
+                continue
+            año = periodo[:4]
+            bon = f.get('bon_actual', 0) or f.get('bon', 0) or 0
+            cargo = f.get('cargo', '') or ''
+            if año not in bon_por_año and bon > 0:
+                bon_por_año[año] = {'bon': bon, 'cargo': cargo}
+            elif año in bon_por_año and not bon_por_año[año]['cargo'] and cargo:
+                bon_por_año[año]['cargo'] = cargo
+
+        # También intentar desde prestsByYear si las filas no tienen bon
+        if not bon_por_año:
+            for año, registros in prests_año.items():
+                for r in registros:
+                    b = r.get('bon', 0) or 0
+                    if b > 0:
+                        bon_por_año.setdefault(año, {'bon': b, 'cargo': ''})
+                        break
+
+        for año in sorted(bon_por_año.keys()):
+            info = bon_por_año[año]
+            # Intentar obtener el cargo desde bjPorPeriodo original (aunque bon=0)
+            cargo_frontend = next(
+                (p.get('cargo', '') for p in data.get('bjPorPeriodo', [])
+                 if str(p.get('desde', ''))[:4] == año),
+                ''
+            )
+            bj_periodos.append({
+                'desde': año + '-01',
+                'hasta': año + '-12',
+                'cargo': cargo_frontend or info.get('cargo', ''),
+                'bon':   info['bon'],
+            })
 
     wb = Workbook()
     ws = wb.active
