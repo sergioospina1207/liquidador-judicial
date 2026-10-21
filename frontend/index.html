@@ -3124,7 +3124,8 @@ function _generarExcel(optsOverride){
   const saludE      = state.resolucion ? baseResE*0.085 : 0;
   const nomPrestE   = state._netoNomPrest   || 0;
   const nomCesE     = (state._netoNomCes    || 0) + (state._netoNomIntCes || 0);
-  const capPrestE   = state._netoIdxPrest   || 0;
+  // gXPrest = acumulador calculado en este mismo loop (correcto, igual al total de la columna)
+  const capPrestE   = gXPrest || state._netoIdxPrest || 0;
   const capCesE     = state._netoIdxCes     || 0;
   const capIntCesE  = state._netoIdxIntCes  || 0;
   const capCesTotE  = capCesE + capIntCesE;
