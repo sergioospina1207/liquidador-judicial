@@ -140,13 +140,25 @@ def _filas_a_prests_año(filas, col_hdrs):
         if año not in prests_año:
             prests_año[año] = []
 
+        conceptos_fila = []
         for list_pos, orig_idx in enumerate(idx_keep):
             val = cols[orig_idx] if orig_idx < len(cols) else 0
             if not val:
                 continue
-            proporcion = val / neto if neto else 0
-            idx_val = round((n_idx - neto) * proporcion)
-            idx_tot = round(n_idx * proporcion)
+            conceptos_fila.append((list_pos, orig_idx, val))
+
+        n_conceptos = len(conceptos_fila)
+        suma_idx_tot_asignado = 0
+        for i, (list_pos, orig_idx, val) in enumerate(conceptos_fila):
+            proporcion = val / neto if neto else (1 / n_conceptos if n_conceptos else 0)
+            # Último concepto: asignar el resto para evitar error de redondeo
+            if i == n_conceptos - 1:
+                idx_tot = n_idx - suma_idx_tot_asignado
+                idx_val = idx_tot - round(val)
+            else:
+                idx_tot = round(n_idx * proporcion)
+                idx_val = round((n_idx - neto) * proporcion)
+                suma_idx_tot_asignado += idx_tot
             prests_año[año].append({
                 'label':  prest_labels[list_pos],
                 'mes':    mes_str,
@@ -436,9 +448,28 @@ def generar_informe(data: dict) -> bytes:
         cr += 2
 
     # ── RESUMEN CONSOLIDADO DE LA SENTENCIA ────────────────
-    total_prest_idx  = resumen.get('totalIndexado', total_idx_global)
-    total_ces_idx    = resumen.get('totalCesTot', 0)
-    total_sentencia  = resumen.get('totalSentencia', total_prest_idx + total_ces_idx)
+    # Cesantías: sumar directamente desde ces_por_año (fuente exacta)
+    total_ces_idx = 0
+    for d in ces_por_año.values():
+        total_ces_idx += d.get('cesIdx', 0) + d.get('intIdx', 0)
+    if not total_ces_idx:
+        total_ces_idx = resumen.get('totalCesTot', 0) or resumen.get('capCesTot', 0)
+
+    # Prestaciones: usar nIdxPrest (suma nIdx solo de filas prestaciones, sin ces/int)
+    # Si no viene (versión antigua del frontend), restar cesantías de nIdx total
+    totales_payload = data.get('totales', {})
+    n_idx_prest = totales_payload.get('nIdxPrest', 0)
+    if n_idx_prest:
+        total_prest_idx = n_idx_prest
+    else:
+        n_idx_total = totales_payload.get('nIdx', 0)
+        if n_idx_total and total_ces_idx:
+            total_prest_idx = n_idx_total - total_ces_idx
+        else:
+            # Fallback: usar total calculado en el loop de prestaciones
+            total_prest_idx = total_idx_global
+
+    total_sentencia = total_prest_idx + total_ces_idx
 
     ws.row_dimensions[cr].height = 6
     cr += 1
