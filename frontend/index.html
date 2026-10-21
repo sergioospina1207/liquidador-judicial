@@ -2009,9 +2009,11 @@ function generarResumen(){
   state.netoIndexado=gX;
   state._gBaseResolucion=gBaseResolucion;
   // Guardar capitales separados (siempre, no solo resolución)
-  state._netoIdxPrest  = gX_prest;
+  // gX_ces y gX_intCes son correctos (COLS_COMPLETO con IPC por concepto)
+  // gX_prest = gX total - ces - intCes (consistente con la columna NETO INDEXADO)
   state._netoIdxCes    = gX_ces;
   state._netoIdxIntCes = gX_intCes;
+  state._netoIdxPrest  = gX - gX_ces - gX_intCes;
   // Guardar nominales (neto antes de indexar)
   state._netoNomPrest  = gNeto_prest;
   state._netoNomCes    = gNeto_ces;
