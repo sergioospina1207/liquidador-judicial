@@ -95,23 +95,87 @@ PREST_LABELS = {
 }
 
 
+EXCLUIR_INF = {
+    'cesantias', 'cesantías',
+    'intereses', 'intereses ces.', 'intereses ces',
+    'intereses cesantías', 'intereses cesantias',
+    'int. cesantías', 'int. cesantias', 'int.cesantías', 'int.cesantias',
+    'intereses de cesantías', 'intereses de cesantias',
+}
+
+
+def _filas_a_prests_año(filas, col_hdrs):
+    """
+    Convierte filas[] (formato excel_gen) en prestsByYear para el informe.
+    Cada fila: periodo "YYYY-MM", cols[], bruto, neto, ipcIni, factor, nIdx
+    """
+    idx_keep = [i for i, h in enumerate(col_hdrs)
+                if h.lower().strip() not in EXCLUIR_INF]
+    prest_labels = [col_hdrs[i] for i in idx_keep]
+
+    prests_año = {}
+    for fila in filas:
+        if fila.get('tipo') == 'sep':
+            continue
+        periodo = fila.get('periodo', '')
+        año = periodo[:4] if periodo and len(periodo) >= 4 else 'Sin año'
+        mes_str = (periodo[5:7] + '/' + periodo[:4]) if len(periodo) >= 7 else periodo
+
+        cols   = fila.get('cols', [])
+        neto   = fila.get('neto', 0) or 0
+        bruto  = fila.get('bruto', 0) or 0
+        ipc_ini = fila.get('ipcIni', 0) or 0
+        ipc_fin = fila.get('ipcFin', 0) or 0
+        n_idx   = fila.get('nIdx', 0) or 0
+        bon     = fila.get('bon_actual', 0) or fila.get('bon', 0) or 0
+
+        if año not in prests_año:
+            prests_año[año] = []
+
+        for list_pos, orig_idx in enumerate(idx_keep):
+            val = cols[orig_idx] if orig_idx < len(cols) else 0
+            if not val:
+                continue
+            proporcion = val / neto if neto else 0
+            idx_val = round((n_idx - neto) * proporcion)
+            idx_tot = round(n_idx * proporcion)
+            prests_año[año].append({
+                'label':  prest_labels[list_pos],
+                'mes':    mes_str,
+                'bruto':  round(val * (bruto / neto) if neto else val),
+                'neto':   round(val),
+                'ipcIni': ipc_ini,
+                'ipcFin': ipc_fin,
+                'idxVal': idx_val,
+                'idxTot': idx_tot,
+                'bon':    bon,
+            })
+
+    return prests_año
+
+
 def generar_informe(data: dict) -> bytes:
     """
     Genera el Excel del Informe Técnico de Liquidación.
 
-    Espera en `data`:
-      cliente       – dict con nombre, cc, entidad, cargo, ejecutoria, turno, ipc, periodo
-      prestsByYear  – dict {año: [{key, label, mes, bruto, neto, ipcIni, ipcFin, idxVal, idxTot}]}
-      bjPorPeriodo  – list [{desde, hasta, cargo, bon}]
-      observaciones – dict con criterios calculados
-      resumen       – dict con totales globales (nomPrest, capPrest, etc.)
+    Acepta dos formatos:
+      A) prestsByYear – dict {año: [{label, mes, bruto, neto, ipcIni, ipcFin, idxVal, idxTot}]}
+      B) filas[]      – mismo formato que excel_gen (se convierte automáticamente)
     """
     cliente      = data.get('cliente', {})
-    prests_año   = data.get('prestsByYear', {})
-    bj_periodos  = data.get('bjPorPeriodo', [])
+    # tramosData viene del frontend (mismo nombre que excel_gen), bjPorPeriodo es alias
+    bj_periodos  = data.get('bjPorPeriodo') or data.get('tramosData', [])
     obs          = data.get('observaciones', {})
     resumen      = data.get('resumen', {})
     ces_por_año  = data.get('cesPorAño', {})
+
+    # Construir prestsByYear desde filas[] si no viene preconstruido
+    prests_año = data.get('prestsByYear') or {}
+    if not prests_año:
+        col_hdrs = data.get('colHeaders', [])
+        filas    = data.get('filas', [])
+        if filas and col_hdrs:
+            prests_año = _filas_a_prests_año(filas, col_hdrs)
 
     wb = Workbook()
     ws = wb.active
