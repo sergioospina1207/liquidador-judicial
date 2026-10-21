@@ -214,6 +214,13 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
             title="Si el funcionario ingresó antes de la prescripción, ingrese la fecha de vinculación. Los días previos se sumarán al cálculo de prestaciones del primer año.">
           <span style="font-size:10px;color:var(--tx2);margin-top:2px">Si se diligencia, los días desde esta fecha hasta el inicio del LxM se suman al primer año para p360, bonificación por servicios y prima de servicios.</span>
         </div>
+        <div class="fg" style="grid-column:1/-1">
+          <label>Observaciones adicionales para el informe técnico <span style="font-weight:400;color:var(--tx2)">(opcional)</span></label>
+          <textarea id="cli-obs-libres" rows="3"
+            placeholder="Ej: La liquidación no incluye intereses moratorios, los cuales serán calculados por separado..."
+            style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--br);border-radius:6px;resize:vertical;font-family:inherit;background:var(--bg);color:var(--tx)"
+            oninput="state.clienteObsLibres=this.value;autoGuardarLocal()"></textarea>
+        </div>
       </div>
     </div>
   </div>
