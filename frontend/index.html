@@ -1906,10 +1906,27 @@ function generarResumen(){
       // IPC referencia para mostrar en tabla (mes de pago, prestación general)
       const ipcI=APPD.ipc[parseInt(año)]?.[mc2]||0;
       const fac=esPosteriorEjec?1:((ipcI&&ipcEj)?ipcEj/ipcI:1);
+      // Acumuladores ces/int SIEMPRE (cesantías pueden pagarse en mes con bruto=0)
+      COLS_COMPLETO.forEach(col=>{
+        const val=vC[col.key]||0; if(val===0) return;
+        const ipcBase=getIPCBase(mes,parseInt(año),col.key);
+        const fCol=esPosteriorEjec?1:((ipcBase&&ipcEj)?ipcEj/ipcBase:1);
+        const valNet=col.ibc?val-val*0.09:val;
+        const valIdx=valNet*fCol;
+        if(col.key==='cesantias'){
+          gNeto_ces+=valNet; gX_ces+=valIdx;
+          if(!cesPorAño[año]) cesPorAño[año]={cesNeto:0,cesIdx:0,intNeto:0,intIdx:0};
+          cesPorAño[año].cesNeto+=valNet; cesPorAño[año].cesIdx+=valIdx;
+        } else if(col.key==='intereses'){
+          gNeto_intCes+=valNet; gX_intCes+=valIdx;
+          if(!cesPorAño[año]) cesPorAño[año]={cesNeto:0,cesIdx:0,intNeto:0,intIdx:0};
+          cesPorAño[año].intNeto+=valNet; cesPorAño[año].intIdx+=valIdx;
+        }
+      });
       if(bruto>0||dMes>0){gB+=bruto;gI+=ibc;gD+=ded;gN+=neto;
         gBaseResolucion+=(vC['prodS1']||0)+(vC['prodS2']||0)+(vC['servicios']||0);
         COLS.forEach(c=>{cT[c.key]+=(vC[c.key]||0);});
-        // Acumuladores separados por tipo — siempre sobre COLS_COMPLETO con IPC correcto por concepto
+        // Acumuladores de prestaciones principales (sin ces/int)
         let nIdxCompleto=0;
         COLS_COMPLETO.forEach(col=>{
           const val=vC[col.key]||0; if(val===0) return;
@@ -1918,17 +1935,10 @@ function generarResumen(){
           const valNet=col.ibc?val-val*0.09:val;
           const valIdx=valNet*fCol;
           nIdxCompleto+=valIdx;
-          if(col.key==='cesantias'){
-            gNeto_ces+=valNet; gX_ces+=valIdx;
-            if(!cesPorAño[año]) cesPorAño[año]={cesNeto:0,cesIdx:0,intNeto:0,intIdx:0};
-            cesPorAño[año].cesNeto+=valNet; cesPorAño[año].cesIdx+=valIdx;
-          } else if(col.key==='intereses'){
-            gNeto_intCes+=valNet; gX_intCes+=valIdx;
-            if(!cesPorAño[año]) cesPorAño[año]={cesNeto:0,cesIdx:0,intNeto:0,intIdx:0};
-            cesPorAño[año].intNeto+=valNet; cesPorAño[año].intIdx+=valIdx;
-          } else {gNeto_prest+=valNet; gX_prest+=valIdx;}
+          if(col.key!=='cesantias'&&col.key!=='intereses'){
+            gNeto_prest+=valNet; gX_prest+=valIdx;
+          }
         });
-        // gX = suma completa con IPC correcto por concepto (incluye ces+int siempre)
         gX+=nIdxCompleto;
       }
       const emp=bruto===0&&dMes===0;
@@ -2013,7 +2023,7 @@ function generarResumen(){
   // gX_prest = gX total - ces - intCes (consistente con la columna NETO INDEXADO)
   state._netoIdxCes    = gX_ces;
   state._netoIdxIntCes = gX_intCes;
-  state._netoIdxPrest  = gX - gX_ces - gX_intCes;
+  state._netoIdxPrest  = gX_prest;
   // Guardar nominales (neto antes de indexar)
   state._netoNomPrest  = gNeto_prest;
   state._netoNomCes    = gNeto_ces;
@@ -2214,7 +2224,7 @@ function _renderTablaHistorial(cont, hist, origen, histFiltrado, cRama, cFisc){
   wrap.innerHTML='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">'+origen+' — '+histFiltrado.length+' liquidaciones'+(histFiltrado.length!==hist.length?' (filtradas de '+hist.length+')':'')+' | <span style="color:#1e5631;font-weight:600">RAMA: '+cRama+'</span> | <span style="color:#1F3864;font-weight:600">FISCALÍA: '+cFisc+'</span></div>';
   const tbl=document.createElement('table');
   tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
-  tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Años</th><th>Ejecutoria</th><th class="r">Bruto</th><th class="r">Neto</th><th class="r">Indexado</th><th class="r">Peso</th><th>Acciones</th></tr></thead>';
+  tbl.innerHTML='<thead><tr><th>Fecha</th><th>NIP</th><th>Cliente</th><th>Ejecutoria</th><th class="r">Neto</th><th class="r">Indexado</th><th class="r">Peso</th><th>Acciones</th></tr></thead>';
   const tbody=document.createElement('tbody');
   histFiltrado.forEach((h,i)=>{
     const tr=document.createElement('tr');
@@ -2223,13 +2233,14 @@ function _renderTablaHistorial(cont, hist, origen, histFiltrado, cRama, cFisc){
     const pesoBytes=(h.snap||'').length;
     const pesoLabel=pesoBytes>1024?Math.round(pesoBytes/1024)+'KB':pesoBytes+'B';
     const pesoColor=pesoBytes>100000?'color:#c62828':pesoBytes>50000?'color:#e65100':'color:#2e7d32';
+    // Rango de años para mostrar compacto
+    const añosArr=(h.años||'').toString().split(',').map(a=>a.trim()).filter(Boolean);
+    const añosRango=añosArr.length>1?añosArr[0]+'–'+añosArr[añosArr.length-1]:(añosArr[0]||'');
     tr.innerHTML=
       '<td style="font-size:11px;white-space:nowrap">'+h.fecha+'</td>'+
       '<td><strong>'+(h.nip||'—')+'</strong></td>'+
-      '<td>'+(h.nombre||'—')+'</td>'+
-      '<td><span class="badge b-az" style="font-size:10px">'+(h.años||'')+'</span></td>'+
-      '<td style="font-size:11px">'+(h.mesEjec||h.mes_ejec||'')+'</td>'+
-      '<td class="r mono">$'+fmt(h.totalBruto||h.total_bruto||0)+'</td>'+
+      '<td title="Años: '+(h.años||'')+'">'+(h.nombre||'—')+'<br><span style="font-size:10px;color:var(--tx2)">'+añosRango+'</span></td>'+
+      '<td style="font-size:11px;white-space:nowrap">'+(h.mesEjec||h.mes_ejec||'')+'</td>'+
       '<td class="r mono">$'+fmt(h.totalNeto||h.total_neto||0)+'</td>'+
       '<td class="r mono" style="font-weight:700;color:var(--vd)">$'+fmt(h.totalIndexado||h.total_indexado||0)+'</td>'+
       '<td class="r mono" style="font-size:11px;'+pesoColor+'">'+pesoLabel+'</td>'+
