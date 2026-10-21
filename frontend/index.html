@@ -1816,7 +1816,7 @@ function generarResumen(){
   tbl.appendChild(thead);
 
   const tbody=document.createElement('tbody');
-  let gB=0,gI=0,gD=0,gN=0,gX=0,gBaseResolucion=0;
+  let gB=0,gI=0,gD=0,gN=0,gX=0,gXPrest=0,gBaseResolucion=0;
   // Acumuladores separados para resolución de pago: prestaciones principales vs cesantías
   let gX_prest=0, gX_ces=0, gX_intCes=0;
   let gNeto_prest=0, gNeto_ces=0, gNeto_intCes=0;
@@ -3083,30 +3083,33 @@ function _generarExcel(optsOverride){
       const ipcI=APPD.ipc[parseInt(año)]?.[mc2]||0;
       const factor=esPosterior?1:((ipcI&&ipcEj)?ipcEj/ipcI:1);
       // Neto indexado calculado prestación por prestación con IPC correcto
-      let nIdx=0;
+      let nIdx=0, nIdxSoloPrest=0;
+      const CES_INT_KEYS=new Set(['cesantias','cesantías','intereses']);
       COLS.forEach(col=>{
         const val=vC[col.key]||0;
         if(val===0) return;
         const ipcBase=getIPCBase(mes,parseInt(año),col.key);
         const fCol=esPosterior?1:((ipcBase&&ipcEj)?ipcEj/ipcBase:1);
         const valNet=col.ibc?val-val*0.09:val;
-        nIdx+=valNet*fCol;
+        const contrib=valNet*fCol;
+        nIdx+=contrib;
+        if(!CES_INT_KEYS.has(col.key)) nIdxSoloPrest+=contrib;
       });
-      gB+=bruto;gIBC+=ibc;gD+=ded;gN+=neto;gX+=nIdx;
+      gB+=bruto;gIBC+=ibc;gD+=ded;gN+=neto;gX+=nIdx;gXPrest+=nIdxSoloPrest;
       gBaseRes+=(vC['prodS1']||0)+(vC['prodS2']||0)+(vC['servicios']||0);
       COLS.forEach(c=>{cT[c.key]+=(vC[c.key]||0);});
       filas.push({tipo:'data',periodo:mes+' '+año,dias:dMes,
         cols:COLS.map(c=>Math.round(vC[c.key]||0)),
         bruto:Math.round(bruto),ibc:Math.round(ibc),ded:Math.round(ded),
         neto:Math.round(neto),ipcIni:ipcI,factor:parseFloat(factor.toFixed(4)),
-        nIdx:Math.round(nIdx)});
+        nIdx:Math.round(nIdx),nIdxSoloPrest:Math.round(nIdxSoloPrest)});
     });
   });
 
   // Totales
   const totales={cols:COLS.map(c=>Math.round(cT[c.key]||0)),
     bruto:Math.round(gB),ibc:Math.round(gIBC),ded:Math.round(gD),
-    neto:Math.round(gN),nIdx:Math.round(gX)};
+    neto:Math.round(gN),nIdx:Math.round(gX),nIdxPrest:Math.round(gXPrest)};
 
   // Cálculos resumen para Excel
   const honPct=(state.honPct||30)/100;
