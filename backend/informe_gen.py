@@ -193,7 +193,11 @@ def generar_informe(data: dict) -> bytes:
     # bjPorPeriodo viene con {desde, hasta, cargo, bon} por cargo/año
     # tramosData son tramos de intereses — NO usarlos como BJ
     bj_periodos  = data.get('bjPorPeriodo', [])
-    obs          = data.get('observaciones', {})
+    obs_raw      = data.get('observaciones', [])
+    # Acepta tanto lista directa como {texto: [...]}
+    if isinstance(obs_raw, dict):
+        obs_raw = obs_raw.get('texto', [])
+    obs = obs_raw if isinstance(obs_raw, list) else []
     resumen      = data.get('resumen', {})
     ces_por_año  = data.get('cesPorAño', {})
 
@@ -518,8 +522,7 @@ def generar_informe(data: dict) -> bytes:
     sc(ws, cr, 1, 'IV.  CRITERIOS Y OBSERVACIONES DE LIQUIDACIÓN', bold=True, size=11)
     cr += 1
 
-    obs_lines = obs.get('texto', [])
-    for linea in obs_lines:
+    for linea in obs:
         ws.merge_cells(f'A{cr}:{LAST_COL}{cr}')
         sc(ws, cr, 1, linea, size=10, wrap=True, color=NG)
         ws.row_dimensions[cr].height = 28 if len(linea) > 120 else 16
