@@ -60,8 +60,15 @@ def fr(ws, r, c1, c2, bg=None, border=None):
 def fmt_fecha(s):
     if not s: return '—'
     s = str(s)
+    # YYYY-MM-DD → DD/MM/YYYY
     if len(s) == 10 and s[4] == '-':
         return s[8:] + '/' + s[5:7] + '/' + s[:4]
+    # YYYY-MM → MM/YYYY (para BJ por período)
+    if len(s) == 7 and s[4] == '-':
+        return s[5:7] + '/' + s[:4]
+    # Solo YYYY → el año
+    if len(s) == 4 and s.isdigit():
+        return s
     return s
 
 NUM = '#,##0'
@@ -183,8 +190,9 @@ def generar_informe(data: dict) -> bytes:
       B) filas[]      – mismo formato que excel_gen (se convierte automáticamente)
     """
     cliente      = data.get('cliente', {})
-    # tramosData viene del frontend (mismo nombre que excel_gen), bjPorPeriodo es alias
-    bj_periodos  = data.get('bjPorPeriodo') or data.get('tramosData', [])
+    # bjPorPeriodo viene con {desde, hasta, cargo, bon} por cargo/año
+    # tramosData son tramos de intereses — NO usarlos como BJ
+    bj_periodos  = data.get('bjPorPeriodo', [])
     obs          = data.get('observaciones', {})
     resumen      = data.get('resumen', {})
     ces_por_año  = data.get('cesPorAño', {})
@@ -527,20 +535,22 @@ def generar_informe(data: dict) -> bytes:
     sc(ws, cr, 1, 'V.  BONIFICACIÓN JUDICIAL (BJ) UTILIZADA POR PERÍODO', bold=True, size=11)
     cr += 1
 
-    bj_hdrs = ['Desde', 'Hasta', 'Cargo / Grado', 'BJ Mensual ($)']
-    bj_widths_cols = [1, 2, 3, 4]  # columnas reales
+    bj_hdrs = ['Vigencia', 'Cargo / Grado', 'BJ Mensual ($)']
     ws.row_dimensions[cr].height = 13
     for ci, h in enumerate(bj_hdrs, 1):
         sc(ws, cr, ci, h, bold=True, size=10, bg=GR_L,
-           h='right' if ci == 4 else 'left', border=THIN)
+           h='right' if ci == 3 else 'left', border=THIN)
     cr += 1
 
     for p in bj_periodos:
         ws.row_dimensions[cr].height = 13
-        sc(ws, cr, 1, fmt_fecha(p.get('desde', '')), size=10, border=THIN)
-        sc(ws, cr, 2, fmt_fecha(p.get('hasta', '')), size=10, border=THIN)
-        sc(ws, cr, 3, p.get('cargo', ''), size=10, border=THIN)
-        sc(ws, cr, 4, p.get('bon', 0), size=10, h='right', nf=NUM, border=THIN)
+        desde = p.get('desde', '')
+        hasta = p.get('hasta', '')
+        # Si viene YYYY-01 / YYYY-12 mostrar solo el año
+        vigencia = desde[:4] if desde and hasta and desde[:4] == hasta[:4] else (fmt_fecha(desde) + ' – ' + fmt_fecha(hasta))
+        sc(ws, cr, 1, vigencia, size=10, border=THIN)
+        sc(ws, cr, 2, p.get('cargo', ''), size=10, border=THIN)
+        sc(ws, cr, 3, p.get('bon', 0), size=10, h='right', nf=NUM, border=THIN)
         cr += 1
 
     cr += 2
