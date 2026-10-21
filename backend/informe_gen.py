@@ -522,7 +522,29 @@ def generar_informe(data: dict) -> bytes:
     sc(ws, cr, 1, 'IV.  CRITERIOS Y OBSERVACIONES DE LIQUIDACIÓN', bold=True, size=11)
     cr += 1
 
-    for linea in obs:
+    # Observaciones automáticas generadas por el backend
+    from datetime import date as _date
+    ipc_val  = cliente.get('ipc', '—')
+    periodo  = cliente.get('periodo', '—')
+    modo     = resumen.get('modo', 'normal')
+    tipo_liq = 'Sin resolución — prestaciones sociales sobre bonificación judicial' \
+               if modo != 'resolucion' else 'Resolución de Pago — prestaciones sobre bonificación judicial'
+
+    auto_obs = [
+        f'Liquidación realizada con corte al {_date.today().strftime("%d de %B de %Y").replace("January","enero").replace("February","febrero").replace("March","marzo").replace("April","abril").replace("May","mayo").replace("June","junio").replace("July","julio").replace("August","agosto").replace("September","septiembre").replace("October","octubre").replace("November","noviembre").replace("December","diciembre")}.',
+        f'Tipo de liquidación: {tipo_liq}.',
+        f'Período liquidado: {periodo}.',
+        f'Indexación calculada con IPC de ejecutoria: {ipc_val}.',
+        'No se incluyen intereses moratorios en este informe.',
+        'Cesantías e intereses sobre cesantías se liquidan en documento separado.',
+        'Valores nominales sujetos a prescripción trienal según normativa vigente.',
+        'Los valores presentados están sujetos a verificación y pueden variar.',
+    ]
+
+    # Agregar observaciones adicionales enviadas por el frontend (sin duplicar las automáticas)
+    todas_obs = auto_obs + [l for l in obs if l and l not in auto_obs]
+
+    for linea in todas_obs:
         ws.merge_cells(f'A{cr}:{LAST_COL}{cr}')
         sc(ws, cr, 1, linea, size=10, wrap=True, color=NG)
         ws.row_dimensions[cr].height = 28 if len(linea) > 120 else 16
