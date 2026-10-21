@@ -1272,7 +1272,7 @@ function calcularTodo(){
     if(elCar) elCar.value=cargos;
   }
 
-  showTab('tab-ps');
+  if(!state._cargandoHist) showTab('tab-ps');
 }
 
 // ══════════════════════════════════════════════════════════
