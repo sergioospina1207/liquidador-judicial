@@ -117,9 +117,17 @@ def _filas_a_prests_año(filas, col_hdrs):
     for fila in filas:
         if fila.get('tipo') == 'sep':
             continue
-        periodo = fila.get('periodo', '')
-        año = periodo[:4] if periodo and len(periodo) >= 4 else 'Sin año'
-        mes_str = (periodo[5:7] + '/' + periodo[:4]) if len(periodo) >= 7 else periodo
+        periodo = str(fila.get('periodo', '') or '')
+        # periodo esperado: "YYYY-MM"; si no, intentar extraer 4 dígitos del inicio
+        if len(periodo) >= 4 and periodo[:4].isdigit():
+            año = periodo[:4]
+            mes_str = (periodo[5:7] + '/' + periodo[:4]) if len(periodo) >= 7 else periodo
+        else:
+            # Fallback: buscar año de 4 dígitos en el string
+            import re
+            m = re.search(r'(20\d\d)', periodo)
+            año = m.group(1) if m else 'Sin año'
+            mes_str = periodo
 
         cols   = fila.get('cols', [])
         neto   = fila.get('neto', 0) or 0
@@ -282,7 +290,10 @@ def generar_informe(data: dict) -> bytes:
     cr += 1
     cr += 1
 
-    años_ordenados = sorted(prests_año.keys(), key=lambda x: int(x))
+    def _año_key(x):
+        try: return int(x)
+        except: return 9999
+    años_ordenados = sorted(prests_año.keys(), key=_año_key)
 
     total_bruto_global = 0
     total_neto_global  = 0
