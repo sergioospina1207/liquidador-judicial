@@ -207,11 +207,9 @@ def generar_informe(data: dict) -> bytes:
             prests_año = _filas_a_prests_año(filas, col_hdrs)
 
     # ── BJ por período ──────────────────────────────────────────────────────
-    # Preferir bjPorPeriodo del frontend si viene con valores reales (bon > 0).
-    # Si no, derivarlo desde las filas: agrupar por año y tomar el bon de la
-    # primera fila con bon > 0 de ese año (todas las filas del mismo año
-    # comparten el mismo bon_actual).
-    bj_periodos = [p for p in data.get('bjPorPeriodo', []) if (p.get('bon') or 0) > 0]
+    # Usar bjPorPeriodo del frontend tal como llegó (puede tener bon=0 válido).
+    # Solo si viene completamente vacío, derivarlo desde las filas.
+    bj_periodos = data.get('bjPorPeriodo', [])
 
     if not bj_periodos and filas:
         # Construir desde filas: un registro por año con cargo y bon
